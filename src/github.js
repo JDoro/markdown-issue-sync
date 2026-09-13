@@ -35,6 +35,15 @@ class GitHubClient {
     return data.number;
   }
 
+
+  async getIssue(issueNumber) {
+    const { data } = await this.octokit.issues.get({
+      owner: this.owner,
+      repo: this.repo,
+      issue_number: issueNumber,
+    });
+    return data;
+  }
   async updateIssueState(issueNumber, isClosed, title, labels, assignees) {
     const params = {
       owner: this.owner,

@@ -31,8 +31,39 @@ async function syncToIssues(filePath, githubClient, repoUrl) {
       changed = true;
     } else {
         // Sync state if already exists
-        core.info(`Updating state, labels, and assignees for issue #${task.issueNumber}`);
-        await githubClient.updateIssueState(task.issueNumber, task.checked, task.title, task.labels, task.assignees);
+        core.info(`Checking existing state for issue #${task.issueNumber}`);
+        const existingIssue = await githubClient.getIssue(task.issueNumber);
+
+        const existingState = existingIssue.state === 'closed';
+        const existingTitle = existingIssue.title;
+        const existingLabels = existingIssue.labels.map(l => l.name);
+        const existingAssignees = existingIssue.assignees.map(a => a.login);
+
+        const stateChanged = existingState !== task.checked;
+        const titleChanged = existingTitle !== task.title;
+
+        const labelsChanged = task.labels && (
+          task.labels.length !== existingLabels.length ||
+          !task.labels.every(l => existingLabels.includes(l))
+        );
+
+        const assigneesChanged = task.assignees && (
+          task.assignees.length !== existingAssignees.length ||
+          !task.assignees.every(a => existingAssignees.includes(a))
+        );
+
+        if (stateChanged || titleChanged || labelsChanged || assigneesChanged) {
+            core.info(`Updating issue #${task.issueNumber} because changes were detected.`);
+            await githubClient.updateIssueState(
+              task.issueNumber,
+              stateChanged ? task.checked : existingState,
+              titleChanged ? task.title : null,
+              labelsChanged ? task.labels : null,
+              assigneesChanged ? task.assignees : null
+            );
+        } else {
+            core.info(`No changes detected for issue #${task.issueNumber}. Skipping update.`);
+        }
     }
   }
 
