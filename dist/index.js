@@ -34727,6 +34727,10 @@ function parseMarkdown(content) {
     }
   }
 
+  if (inDetails) {
+    throw new Error('Malformed markdown: Found unterminated <details> block.');
+  }
+
   return { lines, tasks };
 }
 
