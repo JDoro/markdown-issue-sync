@@ -17,6 +17,17 @@ async function syncToIssues(filePath, githubClient, repoUrl) {
       core.info(`Creating issue for: ${task.title}`);
       const issueNumber = await githubClient.createIssue(task, filePath, repoUrl);
       updateMarkdownLineWithIssue(lines, task.lineIndex, issueNumber);
+
+      // Persist the markdown mapping immediately
+      const tempFile = `${filePath}.tmp`;
+      fs.writeFileSync(tempFile, lines.join('\n'));
+      fs.renameSync(tempFile, filePath);
+
+      // If task is checked, update state to closed now that ID is persisted
+      if (task.checked) {
+          await githubClient.updateIssueState(issueNumber, true, null, null, null);
+      }
+
       changed = true;
     } else {
         // Sync state if already exists
@@ -26,7 +37,6 @@ async function syncToIssues(filePath, githubClient, repoUrl) {
   }
 
   if (changed) {
-    fs.writeFileSync(filePath, lines.join('\n'));
     core.info(`Updated markdown file: ${filePath}`);
   } else {
     core.info('No new issues to create from markdown.');

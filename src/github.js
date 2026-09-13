@@ -32,17 +32,6 @@ class GitHubClient {
     }
 
     const { data } = await this.octokit.issues.create(params);
-
-    // Close issue if it's already checked in markdown
-    if (task.checked) {
-      await this.octokit.issues.update({
-        owner: this.owner,
-        repo: this.repo,
-        issue_number: data.number,
-        state: 'closed'
-      });
-    }
-
     return data.number;
   }
 
