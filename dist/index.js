@@ -34582,15 +34582,22 @@ class GitHubClient {
     this.repo = repo;
   }
 
-  generateIssueBody(task, filePath, repoUrl) {
+  generateIssueBody(task, filePath, repoUrl, defaultBranch) {
     let body = task.details ? `${task.details}\n\n` : '';
-    body += `---\n*Origin: [${filePath}](${repoUrl}/blob/main/${filePath})*\n\n`;
-    body += `<!-- markdown-sync-meta\nsource_file: "${filePath}"\nsection: "${task.section}"\n-->`;
+
+    // Ensure properly escaped links and metadata
+    const encodedFilePath = encodeURI(filePath);
+    const escapedFilePath = filePath.replace(/"/g, '&quot;');
+    const escapedSection = (task.section || '').replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');
+    const branch = defaultBranch || 'main';
+
+    body += `---\n*Origin: [${filePath}](${repoUrl}/blob/${branch}/${encodedFilePath})*\n\n`;
+    body += `<!-- markdown-sync-meta\nsource_file: "${escapedFilePath}"\nsection: "${escapedSection}"\n-->`;
     return body;
   }
 
-  async createIssue(task, filePath, repoUrl) {
-    const body = this.generateIssueBody(task, filePath, repoUrl);
+  async createIssue(task, filePath, repoUrl, defaultBranch) {
+    const body = this.generateIssueBody(task, filePath, repoUrl, defaultBranch);
 
     const params = {
       owner: this.owner,
@@ -34768,7 +34775,7 @@ const core = __nccwpck_require__(7484);
 const { parseMarkdown, updateMarkdownLineWithIssue, updateMarkdownTaskState } = __nccwpck_require__(5073);
 const { GitHubClient } = __nccwpck_require__(6377);
 
-async function syncToIssues(filePath, githubClient, repoUrl) {
+async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
@@ -34780,7 +34787,7 @@ async function syncToIssues(filePath, githubClient, repoUrl) {
   for (const task of tasks) {
     if (!task.issueNumber) {
       core.info(`Creating issue for: ${task.title}`);
-      const issueNumber = await githubClient.createIssue(task, filePath, repoUrl);
+      const issueNumber = await githubClient.createIssue(task, filePath, repoUrl, defaultBranch);
       updateMarkdownLineWithIssue(lines, task.lineIndex, issueNumber);
 
       // Persist the markdown mapping immediately
@@ -34922,13 +34929,14 @@ async function run() {
 
     const context = github.context;
     const { owner, repo } = context.repo;
+    const defaultBranch = context.payload.repository ? context.payload.repository.default_branch : 'main';
     const repoUrl = `https://github.com/${owner}/${repo}`;
 
     const client = new GitHubClient(token, owner, repo);
 
     if (direction === 'to-issues') {
       core.info('Syncing from Markdown to GitHub Issues...');
-      await syncToIssues(filePath, client, repoUrl);
+      await syncToIssues(filePath, client, repoUrl, defaultBranch);
 
       // Auto-commit if running in GHA
       if (process.env.GITHUB_WORKSPACE) {

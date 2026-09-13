@@ -12,13 +12,14 @@ async function run() {
 
     const context = github.context;
     const { owner, repo } = context.repo;
+    const defaultBranch = context.payload.repository ? context.payload.repository.default_branch : 'main';
     const repoUrl = `https://github.com/${owner}/${repo}`;
 
     const client = new GitHubClient(token, owner, repo);
 
     if (direction === 'to-issues') {
       core.info('Syncing from Markdown to GitHub Issues...');
-      await syncToIssues(filePath, client, repoUrl);
+      await syncToIssues(filePath, client, repoUrl, defaultBranch);
 
       // Auto-commit if running in GHA
       if (process.env.GITHUB_WORKSPACE) {

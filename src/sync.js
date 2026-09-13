@@ -3,7 +3,7 @@ const core = require('@actions/core');
 const { parseMarkdown, updateMarkdownLineWithIssue, updateMarkdownTaskState } = require('./parser');
 const { GitHubClient } = require('./github');
 
-async function syncToIssues(filePath, githubClient, repoUrl) {
+async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
@@ -15,7 +15,7 @@ async function syncToIssues(filePath, githubClient, repoUrl) {
   for (const task of tasks) {
     if (!task.issueNumber) {
       core.info(`Creating issue for: ${task.title}`);
-      const issueNumber = await githubClient.createIssue(task, filePath, repoUrl);
+      const issueNumber = await githubClient.createIssue(task, filePath, repoUrl, defaultBranch);
       updateMarkdownLineWithIssue(lines, task.lineIndex, issueNumber);
 
       // Persist the markdown mapping immediately

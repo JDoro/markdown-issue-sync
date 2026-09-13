@@ -7,15 +7,22 @@ class GitHubClient {
     this.repo = repo;
   }
 
-  generateIssueBody(task, filePath, repoUrl) {
+  generateIssueBody(task, filePath, repoUrl, defaultBranch) {
     let body = task.details ? `${task.details}\n\n` : '';
-    body += `---\n*Origin: [${filePath}](${repoUrl}/blob/main/${filePath})*\n\n`;
-    body += `<!-- markdown-sync-meta\nsource_file: "${filePath}"\nsection: "${task.section}"\n-->`;
+
+    // Ensure properly escaped links and metadata
+    const encodedFilePath = encodeURI(filePath);
+    const escapedFilePath = filePath.replace(/"/g, '&quot;');
+    const escapedSection = (task.section || '').replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');
+    const branch = defaultBranch || 'main';
+
+    body += `---\n*Origin: [${filePath}](${repoUrl}/blob/${branch}/${encodedFilePath})*\n\n`;
+    body += `<!-- markdown-sync-meta\nsource_file: "${escapedFilePath}"\nsection: "${escapedSection}"\n-->`;
     return body;
   }
 
-  async createIssue(task, filePath, repoUrl) {
-    const body = this.generateIssueBody(task, filePath, repoUrl);
+  async createIssue(task, filePath, repoUrl, defaultBranch) {
+    const body = this.generateIssueBody(task, filePath, repoUrl, defaultBranch);
 
     const params = {
       owner: this.owner,
