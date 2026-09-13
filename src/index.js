@@ -30,10 +30,12 @@ async function run() {
             const diff = execFileSync('git', ['diff', '--staged']).toString();
             if (diff) {
                 execFileSync('git', ['commit', '-m', 'chore: sync issues to markdown [skip ci]']);
+                execFileSync('git', ['pull', '--rebase']);
                 execFileSync('git', ['push']);
             }
          } catch (e) {
-             core.info(`Could not commit/push: ${e.message}`);
+             const stderr = e.stderr ? e.stderr.toString() : '';
+             core.setFailed(`Could not commit/push: ${e.message}\n${stderr}`);
          }
       }
     } else if (direction === 'to-markdown') {
@@ -55,10 +57,12 @@ async function run() {
             const diff = execFileSync('git', ['diff', '--staged']).toString();
             if (diff) {
                 execFileSync('git', ['commit', '-m', 'chore: sync issue state to markdown [skip ci]']);
+                execFileSync('git', ['pull', '--rebase']);
                 execFileSync('git', ['push']);
             }
          } catch (e) {
-             core.info(`Could not commit/push: ${e.message}`);
+             const stderr = e.stderr ? e.stderr.toString() : '';
+             core.setFailed(`Could not commit/push: ${e.message}\n${stderr}`);
          }
       }
     } else {
