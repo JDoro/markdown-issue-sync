@@ -34631,10 +34631,10 @@ class GitHubClient {
     if (title) {
         params.title = title;
     }
-    if (labels && labels.length > 0) {
+    if (Array.isArray(labels)) {
         params.labels = labels;
     }
-    if (assignees && assignees.length > 0) {
+    if (Array.isArray(assignees)) {
         params.assignees = assignees;
     }
     await this.octokit.issues.update(params);
