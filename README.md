@@ -1,6 +1,6 @@
 # Markdown Issue Sync
 
-A GitHub Composite Action that bi-directionally syncs Markdown roadmap/task files with GitHub Issues.
+A JavaScript GitHub Action that bi-directionally syncs Markdown roadmap/task files with GitHub Issues.
 
 ## Features
 
@@ -9,7 +9,7 @@ A GitHub Composite Action that bi-directionally syncs Markdown roadmap/task file
 
 ## Setup
 
-Since this is a composite action, it can be referenced in your workflow like so:
+This is a compiled JavaScript action. It can be referenced in your workflow like so:
 
 ```yaml
 uses: owner/markdown-issue-sync@v1
@@ -22,6 +22,11 @@ with:
 ### Allowing Private Repo Access
 
 If you are using this action from another private repository, ensure that the calling repository has access to this action repository in GitHub Actions settings (Settings -> Actions -> General -> Access).
+
+
+### Development and Building
+
+Because this is a JavaScript action, the code in `src/` must be compiled into `dist/index.js` before it can be run by GitHub Actions. If you make any changes to the source code, you must run `npm run build` and commit the updated `dist/` directory.
 
 ## Usage Examples
 
