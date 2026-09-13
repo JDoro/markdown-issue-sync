@@ -39,6 +39,10 @@ on:
   issues:
     types: [closed, reopened]
 
+permissions:
+  contents: write
+  issues: write
+
 # Important: Prevent race conditions when pushing back to the repo
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
