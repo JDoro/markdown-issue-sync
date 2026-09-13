@@ -1,0 +1,15 @@
+name: 'Markdown Issue Sync'
+description: 'Bi-directionally syncs Markdown roadmap/task files with GitHub Issues'
+inputs:
+  file_path:
+    description: 'Path to the Markdown file'
+    required: true
+  direction:
+    description: 'Sync direction: to-issues or to-markdown'
+    required: true
+  github_token:
+    description: 'GitHub token for API access'
+    required: true
+runs:
+  using: 'node24'
+  main: 'dist/index.js'

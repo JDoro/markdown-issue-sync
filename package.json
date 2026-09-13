@@ -1,0 +1,31 @@
+{
+  "name": "markdown-issue-sync",
+  "version": "1.0.0",
+  "description": "Bi-directionally syncs Markdown roadmap/task files with GitHub Issues",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "jest",
+    "build": "ncc build src/index.js -o dist --source-map --license licenses.txt"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JDoro/markdown-issue-sync.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/JDoro/markdown-issue-sync/issues"
+  },
+  "homepage": "https://github.com/JDoro/markdown-issue-sync#readme",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.1",
+    "@octokit/rest": "^20.1.2"
+  },
+  "devDependencies": {
+    "@vercel/ncc": "^0.45.0",
+    "jest": "^30.5.1"
+  }
+}
