@@ -34781,6 +34781,8 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
   }
 
   const content = fs.readFileSync(filePath, 'utf8');
+  const eol = content.includes('\r\n') ? '\r\n' : '\n';
+  const hasTrailingNewline = content.endsWith(eol);
   const { lines, tasks } = parseMarkdown(content);
   let changed = false;
 
@@ -34792,7 +34794,8 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
 
       // Persist the markdown mapping immediately
       const tempFile = `${filePath}.tmp`;
-      fs.writeFileSync(tempFile, lines.join('\n'));
+      const output = lines.join(eol) + (hasTrailingNewline && lines[lines.length - 1] !== '' ? eol : '');
+      fs.writeFileSync(tempFile, output);
       fs.renameSync(tempFile, filePath);
 
       // If task is checked, update state to closed now that ID is persisted
@@ -34852,6 +34855,8 @@ async function syncToMarkdown(filePath, issueNumber, isClosed) {
   }
 
   const content = fs.readFileSync(filePath, 'utf8');
+  const eol = content.includes('\r\n') ? '\r\n' : '\n';
+  const hasTrailingNewline = content.endsWith(eol);
   const { lines, tasks } = parseMarkdown(content);
 
   const task = tasks.find(t => t.issueNumber === issueNumber);
@@ -34860,7 +34865,8 @@ async function syncToMarkdown(filePath, issueNumber, isClosed) {
     if (task.checked !== isClosed) {
       core.info(`Updating markdown task state for issue #${issueNumber}`);
       updateMarkdownTaskState(lines, task.lineIndex, isClosed);
-      fs.writeFileSync(filePath, lines.join('\n'));
+      const output = lines.join(eol) + (hasTrailingNewline && lines[lines.length - 1] !== '' ? eol : '');
+      fs.writeFileSync(filePath, output);
     } else {
       core.info('Markdown task state already matches issue.');
     }
