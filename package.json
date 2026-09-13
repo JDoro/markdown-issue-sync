@@ -1,8 +1,8 @@
 {
-  "name": "app",
+  "name": "markdown-issue-sync",
   "version": "1.0.0",
-  "description": "Initial placeholder",
-  "main": "index.js",
+  "description": "Bi-directionally syncs Markdown roadmap/task files with GitHub Issues",
+  "main": "dist/index.js",
   "scripts": {
     "test": "jest",
     "build": "ncc build src/index.js -o dist --source-map --license licenses.txt"
