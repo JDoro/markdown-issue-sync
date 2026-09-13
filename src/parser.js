@@ -19,7 +19,9 @@ function parseMarkdown(content) {
       detailsLines.push(line);
       if (line.includes('</details>')) {
         inDetails = false;
-        currentTask.details = detailsLines.join('\n');
+        if (currentTask) {
+          currentTask.details = detailsLines.join('\n');
+        }
       }
       continue;
     }
@@ -66,15 +68,18 @@ function parseMarkdown(content) {
         continue;
       }
 
-      if (line.includes('<details>')) {
-        inDetails = true;
-        detailsLines = [line];
-        if (line.includes('</details>')) {
-          inDetails = false;
+    }
+
+    if (/<details\b/.test(line)) {
+      inDetails = true;
+      detailsLines = [line];
+      if (line.includes('</details>')) {
+        inDetails = false;
+        if (currentTask) {
           currentTask.details = detailsLines.join('\n');
         }
-        continue;
       }
+      continue;
     }
   }
 
