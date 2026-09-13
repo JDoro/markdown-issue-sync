@@ -34587,7 +34587,7 @@ class GitHubClient {
 
     // Ensure properly escaped links and metadata
     const encodedFilePath = encodeURI(filePath).replace(/[#?()]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
-    const escapedFilePath = filePath.replace(/"/g, '&quot;');
+    const escapedFilePath = filePath.replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');
     const escapedSection = (task.section || '').replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');
     const branch = defaultBranch || 'main';
 
