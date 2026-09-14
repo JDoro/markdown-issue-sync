@@ -12,7 +12,7 @@ on:
         required: false
         type: string
     secrets:
-      github_token:
+      custom_token:
         description: 'GitHub token for API access; defaults to the calling workflow github.token'
         required: false
 
@@ -29,10 +29,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.github_token || github.token }}
+          token: ${{ secrets.custom_token || github.token }}
       - name: Sync Markdown and Issues
-        uses: $/
+        uses: JDoro/markdown-issue-sync@v1
         with:
           file_path: ${{ inputs.file_path }}
           direction: ${{ inputs.direction }}
-          github_token: ${{ secrets.github_token || github.token }}
+          github_token: ${{ secrets.custom_token || github.token }}

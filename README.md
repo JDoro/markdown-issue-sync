@@ -54,7 +54,7 @@ jobs:
     with:
       file_path: 'ROADMAP.md'
     secrets:
-      github_token: ${{ secrets.MY_PAT }}
+      custom_token: ${{ secrets.MY_PAT }}
 ```
 
 ### Allowing Private Repo Access
