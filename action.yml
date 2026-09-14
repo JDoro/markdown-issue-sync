@@ -5,11 +5,12 @@ inputs:
     description: 'Path to the Markdown file'
     required: true
   direction:
-    description: 'Sync direction: to-issues or to-markdown'
-    required: true
+    description: 'Sync direction: to-issues or to-markdown. Optional; auto-detected from the triggering event when omitted.'
+    required: false
   github_token:
     description: 'GitHub token for API access'
-    required: true
+    required: false
+    default: ${{ github.token }}
 runs:
   using: 'node24'
   main: 'dist/index.js'

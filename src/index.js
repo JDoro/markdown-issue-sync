@@ -2,15 +2,27 @@ const core = require('@actions/core');
 const github = require('@actions/github');
 const { syncToIssues, syncToMarkdown } = require('./sync');
 const { GitHubClient } = require('./github');
-const { execFileSync } = require('child_process');
+const { resolveDirection } = require('./direction');
+const { commitAndPush } = require('./git');
 
 async function run() {
   try {
     const filePath = core.getInput('file_path', { required: true });
-    const direction = core.getInput('direction', { required: true });
     const token = core.getInput('github_token', { required: true });
 
     const context = github.context;
+    let direction = core.getInput('direction');
+
+    if (!direction) {
+      const resolved = resolveDirection(context.eventName, context.payload.action);
+      if (resolved.skip) {
+        core.notice(resolved.reason);
+        return;
+      }
+      direction = resolved.direction;
+      core.info(`Auto-detected sync direction: ${direction}`);
+    }
+
     const { owner, repo } = context.repo;
     const defaultBranch = context.payload.repository ? context.payload.repository.default_branch : 'main';
     const repoUrl = `https://github.com/${owner}/${repo}`;
@@ -20,25 +32,7 @@ async function run() {
     if (direction === 'to-issues') {
       core.info('Syncing from Markdown to GitHub Issues...');
       await syncToIssues(filePath, client, repoUrl, defaultBranch);
-
-      // Auto-commit if running in GHA
-      if (process.env.GITHUB_WORKSPACE) {
-         try {
-            execFileSync('git', ['config', '--local', 'user.name', 'github-actions[bot]']);
-            execFileSync('git', ['config', '--local', 'user.email', 'github-actions[bot]@users.noreply.github.com']);
-            execFileSync('git', ['add', filePath]);
-            // Check if there are changes
-            const diff = execFileSync('git', ['diff', '--staged']).toString();
-            if (diff) {
-                execFileSync('git', ['commit', '-m', 'chore: sync issues to markdown [skip ci]']);
-                execFileSync('git', ['pull', '--rebase']);
-                execFileSync('git', ['push']);
-            }
-         } catch (e) {
-             const stderr = e.stderr ? e.stderr.toString() : '';
-             core.setFailed(`Could not commit/push: ${e.message}\n${stderr}`);
-         }
-      }
+      commitAndPush(filePath, 'chore: sync issues to markdown [skip ci]');
     } else if (direction === 'to-markdown') {
       if (!context.payload.issue) {
         throw new Error('Direction "to-markdown" must be triggered by an issue event.');
@@ -49,23 +43,7 @@ async function run() {
       const isClosed = context.payload.issue.state === 'closed';
 
       await syncToMarkdown(filePath, issueNumber, isClosed);
-
-      if (process.env.GITHUB_WORKSPACE) {
-         try {
-            execFileSync('git', ['config', '--local', 'user.name', 'github-actions[bot]']);
-            execFileSync('git', ['config', '--local', 'user.email', 'github-actions[bot]@users.noreply.github.com']);
-            execFileSync('git', ['add', filePath]);
-            const diff = execFileSync('git', ['diff', '--staged']).toString();
-            if (diff) {
-                execFileSync('git', ['commit', '-m', 'chore: sync issue state to markdown [skip ci]']);
-                execFileSync('git', ['pull', '--rebase']);
-                execFileSync('git', ['push']);
-            }
-         } catch (e) {
-             const stderr = e.stderr ? e.stderr.toString() : '';
-             core.setFailed(`Could not commit/push: ${e.message}\n${stderr}`);
-         }
-      }
+      commitAndPush(filePath, 'chore: sync issue state to markdown [skip ci]');
     } else {
       throw new Error(`Invalid direction: ${direction}. Must be 'to-issues' or 'to-markdown'.`);
     }

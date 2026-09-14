@@ -572,8 +572,8 @@ class OidcClient {
             const res = yield httpclient
                 .getJson(id_token_url)
                 .catch(error => {
-                throw new Error(`Failed to get ID Token. \n
-        Error Code : ${error.statusCode}\n
+                throw new Error(`Failed to get ID Token. \n 
+        Error Code : ${error.statusCode}\n 
         Error Message: ${error.message}`);
             });
             const id_token = (_a = res.result) === null || _a === void 0 ? void 0 : _a.value;
@@ -34570,6 +34570,72 @@ module.exports = parseParams
 
 /***/ }),
 
+/***/ 3889:
+/***/ ((module) => {
+
+const MARKDOWN_EVENTS = ['push', 'workflow_dispatch', 'schedule'];
+const ISSUE_STATE_ACTIONS = ['closed', 'reopened'];
+
+function resolveDirection(eventName, issueAction) {
+  if (MARKDOWN_EVENTS.includes(eventName)) {
+    return { direction: 'to-issues' };
+  }
+
+  if (eventName === 'issues') {
+    if (ISSUE_STATE_ACTIONS.includes(issueAction)) {
+      return { direction: 'to-markdown' };
+    }
+    return {
+      skip: true,
+      reason: `Issues event action "${issueAction}" does not affect task state; skipping sync.`,
+    };
+  }
+
+  throw new Error(
+    `Could not auto-detect sync direction for event "${eventName}". ` +
+      'Supported events: push, workflow_dispatch, schedule, issues (closed/reopened). ' +
+      'Set the "direction" input explicitly to override.'
+  );
+}
+
+module.exports = { resolveDirection };
+
+
+/***/ }),
+
+/***/ 7556:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const core = __nccwpck_require__(7484);
+const { execFileSync } = __nccwpck_require__(5317);
+
+function commitAndPush(filePath, message) {
+  if (!process.env.GITHUB_WORKSPACE) {
+    return;
+  }
+
+  try {
+    execFileSync('git', ['config', '--local', 'user.name', 'github-actions[bot]']);
+    execFileSync('git', ['config', '--local', 'user.email', 'github-actions[bot]@users.noreply.github.com']);
+    execFileSync('git', ['add', filePath]);
+    // Check if there are changes
+    const diff = execFileSync('git', ['diff', '--staged']).toString();
+    if (diff) {
+      execFileSync('git', ['commit', '-m', message]);
+      execFileSync('git', ['pull', '--rebase']);
+      execFileSync('git', ['push']);
+    }
+  } catch (e) {
+    const stderr = e.stderr ? e.stderr.toString() : '';
+    core.setFailed(`Could not commit/push: ${e.message}\n${stderr}`);
+  }
+}
+
+module.exports = { commitAndPush };
+
+
+/***/ }),
+
 /***/ 6377:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -34892,7 +34958,7 @@ module.exports = {
 /************************************************************************/
 /******/ 	// The module cache
 /******/ 	var __webpack_module_cache__ = {};
-/******/
+/******/ 	
 /******/ 	// The require function
 /******/ 	function __nccwpck_require__(moduleId) {
 /******/ 		// Check if module is in cache
@@ -34906,7 +34972,7 @@ module.exports = {
 /******/ 			// no module.loaded needed
 /******/ 			exports: {}
 /******/ 		};
-/******/
+/******/ 	
 /******/ 		// Execute the module function
 /******/ 		var threw = true;
 /******/ 		try {
@@ -34915,30 +34981,42 @@ module.exports = {
 /******/ 		} finally {
 /******/ 			if(threw) delete __webpack_module_cache__[moduleId];
 /******/ 		}
-/******/
+/******/ 	
 /******/ 		// Return the exports of the module
 /******/ 		return module.exports;
 /******/ 	}
-/******/
+/******/ 	
 /************************************************************************/
 /******/ 	/* webpack/runtime/asset-relocator-loader */
 /******/ 	if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = __dirname + "/";
-/******/
+/******/ 	
 /************************************************************************/
 var __webpack_exports__ = {};
 const core = __nccwpck_require__(7484);
 const github = __nccwpck_require__(3228);
 const { syncToIssues, syncToMarkdown } = __nccwpck_require__(3969);
 const { GitHubClient } = __nccwpck_require__(6377);
-const { execFileSync } = __nccwpck_require__(5317);
+const { resolveDirection } = __nccwpck_require__(3889);
+const { commitAndPush } = __nccwpck_require__(7556);
 
 async function run() {
   try {
     const filePath = core.getInput('file_path', { required: true });
-    const direction = core.getInput('direction', { required: true });
     const token = core.getInput('github_token', { required: true });
 
     const context = github.context;
+    let direction = core.getInput('direction');
+
+    if (!direction) {
+      const resolved = resolveDirection(context.eventName, context.payload.action);
+      if (resolved.skip) {
+        core.notice(resolved.reason);
+        return;
+      }
+      direction = resolved.direction;
+      core.info(`Auto-detected sync direction: ${direction}`);
+    }
+
     const { owner, repo } = context.repo;
     const defaultBranch = context.payload.repository ? context.payload.repository.default_branch : 'main';
     const repoUrl = `https://github.com/${owner}/${repo}`;
@@ -34948,25 +35026,7 @@ async function run() {
     if (direction === 'to-issues') {
       core.info('Syncing from Markdown to GitHub Issues...');
       await syncToIssues(filePath, client, repoUrl, defaultBranch);
-
-      // Auto-commit if running in GHA
-      if (process.env.GITHUB_WORKSPACE) {
-         try {
-            execFileSync('git', ['config', '--local', 'user.name', 'github-actions[bot]']);
-            execFileSync('git', ['config', '--local', 'user.email', 'github-actions[bot]@users.noreply.github.com']);
-            execFileSync('git', ['add', filePath]);
-            // Check if there are changes
-            const diff = execFileSync('git', ['diff', '--staged']).toString();
-            if (diff) {
-                execFileSync('git', ['commit', '-m', 'chore: sync issues to markdown [skip ci]']);
-                execFileSync('git', ['pull', '--rebase']);
-                execFileSync('git', ['push']);
-            }
-         } catch (e) {
-             const stderr = e.stderr ? e.stderr.toString() : '';
-             core.setFailed(`Could not commit/push: ${e.message}\n${stderr}`);
-         }
-      }
+      commitAndPush(filePath, 'chore: sync issues to markdown [skip ci]');
     } else if (direction === 'to-markdown') {
       if (!context.payload.issue) {
         throw new Error('Direction "to-markdown" must be triggered by an issue event.');
@@ -34977,23 +35037,7 @@ async function run() {
       const isClosed = context.payload.issue.state === 'closed';
 
       await syncToMarkdown(filePath, issueNumber, isClosed);
-
-      if (process.env.GITHUB_WORKSPACE) {
-         try {
-            execFileSync('git', ['config', '--local', 'user.name', 'github-actions[bot]']);
-            execFileSync('git', ['config', '--local', 'user.email', 'github-actions[bot]@users.noreply.github.com']);
-            execFileSync('git', ['add', filePath]);
-            const diff = execFileSync('git', ['diff', '--staged']).toString();
-            if (diff) {
-                execFileSync('git', ['commit', '-m', 'chore: sync issue state to markdown [skip ci]']);
-                execFileSync('git', ['pull', '--rebase']);
-                execFileSync('git', ['push']);
-            }
-         } catch (e) {
-             const stderr = e.stderr ? e.stderr.toString() : '';
-             core.setFailed(`Could not commit/push: ${e.message}\n${stderr}`);
-         }
-      }
+      commitAndPush(filePath, 'chore: sync issue state to markdown [skip ci]');
     } else {
       throw new Error(`Invalid direction: ${direction}. Must be 'to-issues' or 'to-markdown'.`);
     }

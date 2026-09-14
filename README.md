@@ -9,28 +9,7 @@ A JavaScript GitHub Action that bi-directionally syncs Markdown roadmap/task fil
 
 ## Setup
 
-This is a compiled JavaScript action. It can be referenced in your workflow like so:
-
-```yaml
-uses: owner/markdown-issue-sync@v1
-with:
-  file_path: 'ROADMAP.md'
-  direction: 'to-issues'
-  github_token: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Allowing Private Repo Access
-
-If you are using this action from another private repository, ensure that the calling repository has access to this action repository in GitHub Actions settings (Settings -> Actions -> General -> Access).
-
-
-### Development and Building
-
-Because this is a JavaScript action, the code in `src/` must be compiled into `dist/index.js` before it can be run by GitHub Actions. If you make any changes to the source code, you must run `npm run build` and commit the updated `dist/` directory.
-
-## Usage Examples
-
-Create `.github/workflows/issue-plan-sync.yml` in your consumer repository:
+The fastest way to use this action is the bundled reusable workflow. Create `.github/workflows/issue-plan-sync.yml` in your consumer repository:
 
 ```yaml
 name: Issue Plan Sync
@@ -44,40 +23,72 @@ on:
   issues:
     types: [closed, reopened]
 
-permissions:
-  contents: write
-  issues: write
-
-# Important: Prevent race conditions when pushing back to the repo
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  sync_to_issues:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Sync Markdown to Issues
-        uses: owner/markdown-issue-sync@v1
-        with:
-          file_path: 'ROADMAP.md'
-          direction: 'to-issues'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-  sync_to_markdown:
-    if: github.event_name == 'issues'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Sync Issues to Markdown
-        uses: owner/markdown-issue-sync@v1
-        with:
-          file_path: 'ROADMAP.md'
-          direction: 'to-markdown'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+  sync:
+    uses: JDoro/markdown-issue-sync/.github/workflows/sync.yml@v1
+    with:
+      file_path: 'ROADMAP.md'
 ```
+
+That's it. The reusable workflow handles permissions (`contents: write`, `issues: write`), concurrency guarding, checkout, the token, and picking the right sync direction for each trigger.
+
+### How Direction Is Auto-Detected
+
+When the `direction` input is omitted, the action infers it from the triggering event:
+
+- `push`, `workflow_dispatch`, `schedule` → `to-issues`
+- `issues` (`closed`/`reopened`) → `to-markdown`
+- `issues` with other actions (e.g. `opened`, `labeled`) → skipped with a notice; no sync runs
+- anything else → the run fails with an error explaining the supported events
+
+Set `direction` explicitly to override auto-detection.
+
+### Custom Token
+
+The reusable workflow uses the caller's `github.token` by default. To use a different token (e.g. a PAT), pass it as a secret:
+
+```yaml
+jobs:
+  sync:
+    uses: JDoro/markdown-issue-sync/.github/workflows/sync.yml@v1
+    with:
+      file_path: 'ROADMAP.md'
+    secrets:
+      github_token: ${{ secrets.MY_PAT }}
+```
+
+### Allowing Private Repo Access
+
+If you are using this action from another private repository, ensure that the calling repository has access to this action repository in GitHub Actions settings (Settings -> Actions -> General -> Access). This applies to both the action and the reusable workflow.
+
+### Advanced: Using the Action Directly
+
+You can also call the action in your own workflow. `direction` and `github_token` are optional now; only `file_path` is required:
+
+```yaml
+jobs:
+  sync:
+    if: github.event_name != 'issues' || github.event.action == 'closed' || github.event.action == 'reopened'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    concurrency:
+      group: issue-plan-sync-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync Markdown and Issues
+        uses: JDoro/markdown-issue-sync@v1
+        with:
+          file_path: 'ROADMAP.md'
+```
+
+A single job handles both directions: pushes of the Markdown file sync to issues, and issue close/reopen events sync back to the Markdown checkboxes. Commit messages produced by the action include `[skip ci]`, so the push-backs never trigger the workflow again.
+
+### Development and Building
+
+Because this is a JavaScript action, the code in `src/` must be compiled into `dist/index.js` before it can be run by GitHub Actions. If you make any changes to the source code, you must run `npm run build` and commit the updated `dist/` directory.
 
 ## Markdown Syntax Example
 

@@ -1,0 +1,38 @@
+name: Markdown Issue Sync
+
+on:
+  workflow_call:
+    inputs:
+      file_path:
+        description: 'Path to the Markdown file'
+        required: true
+        type: string
+      direction:
+        description: 'Sync direction: to-issues or to-markdown. Optional; auto-detected from the triggering event when omitted.'
+        required: false
+        type: string
+    secrets:
+      github_token:
+        description: 'GitHub token for API access; defaults to the calling workflow github.token'
+        required: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: markdown-issue-sync-${{ github.ref }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.github_token || github.token }}
+      - name: Sync Markdown and Issues
+        uses: $/
+        with:
+          file_path: ${{ inputs.file_path }}
+          direction: ${{ inputs.direction }}
+          github_token: ${{ secrets.github_token || github.token }}
