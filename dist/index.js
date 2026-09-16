@@ -34651,6 +34651,17 @@ class GitHubClient {
   generateIssueBody(task, filePath, repoUrl, defaultBranch) {
     let body = task.details ? `${task.details}\n\n` : '';
 
+    let metadataHeader = '';
+    if (task.priority) metadataHeader += `**Priority:** ${task.priority}\n`;
+    if (task.estimate) metadataHeader += `**Estimate:** ${task.estimate}\n`;
+    if (task.dependsOn && task.dependsOn.length > 0) {
+      metadataHeader += `**Depends on:** ${task.dependsOn.map(id => '#' + id).join(', ')}\n`;
+    }
+
+    if (metadataHeader) {
+      body = metadataHeader + '\n---\n\n' + body;
+    }
+
     // Ensure properly escaped links and metadata
     const encodedFilePath = encodeURI(filePath).replace(/[#?()]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
     const escapedFilePath = filePath.replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');
@@ -34724,6 +34735,9 @@ const TASK_REGEX = /^(\s*-\s*\[([ xX])\])\s+(.*?)(?:\s+#(\d+))?\s*$/;
 const HEADING_REGEX = /^(#+)\s+(.*)$/;
 const LABELS_REGEX = /^\s*-\s*\*\*Labels:\*\*\s*(.*)$/;
 const ASSIGNEES_REGEX = /^\s*-\s*\*\*Assignees:\*\*\s*(.*)$/;
+const PRIORITY_REGEX = /^\s*-\s*\*\*Priority:\*\*\s*(.*)$/;
+const DEPENDS_ON_REGEX = /^\s*-\s*\*\*Depends on:\*\*\s*(.*)$/;
+const ESTIMATE_REGEX = /^\s*-\s*\*\*Estimate:\*\*\s*(.*)$/;
 
 function parseMarkdown(content) {
   const lines = content.split(/\r?\n/);
@@ -34771,6 +34785,9 @@ function parseMarkdown(content) {
         section: currentSection,
         labels: [],
         assignees: [],
+        priority: null,
+        dependsOn: [],
+        estimate: null,
         details: null
       };
       tasks.push(currentTask);
@@ -34787,6 +34804,24 @@ function parseMarkdown(content) {
       const assigneesMatch = line.match(ASSIGNEES_REGEX);
       if (assigneesMatch) {
         currentTask.assignees = assigneesMatch[1].split(',').map(a => a.replace(/[`@]/g, '').trim()).filter(Boolean);
+        continue;
+      }
+
+      const priorityMatch = line.match(PRIORITY_REGEX);
+      if (priorityMatch) {
+        currentTask.priority = priorityMatch[1].replace(/`/g, '').trim();
+        continue;
+      }
+
+      const dependsOnMatch = line.match(DEPENDS_ON_REGEX);
+      if (dependsOnMatch) {
+        currentTask.dependsOn = dependsOnMatch[1].split(',').map(d => d.replace(/[`#]/g, '').trim()).filter(Boolean);
+        continue;
+      }
+
+      const estimateMatch = line.match(ESTIMATE_REGEX);
+      if (estimateMatch) {
+        currentTask.estimate = estimateMatch[1].replace(/`/g, '').trim();
         continue;
       }
 

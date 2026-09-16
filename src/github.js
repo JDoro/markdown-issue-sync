@@ -10,6 +10,17 @@ class GitHubClient {
   generateIssueBody(task, filePath, repoUrl, defaultBranch) {
     let body = task.details ? `${task.details}\n\n` : '';
 
+    let metadataHeader = '';
+    if (task.priority) metadataHeader += `**Priority:** ${task.priority}\n`;
+    if (task.estimate) metadataHeader += `**Estimate:** ${task.estimate}\n`;
+    if (task.dependsOn && task.dependsOn.length > 0) {
+      metadataHeader += `**Depends on:** ${task.dependsOn.map(id => '#' + id).join(', ')}\n`;
+    }
+
+    if (metadataHeader) {
+      body = metadataHeader + '\n---\n\n' + body;
+    }
+
     // Ensure properly escaped links and metadata
     const encodedFilePath = encodeURI(filePath).replace(/[#?()]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
     const escapedFilePath = filePath.replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');

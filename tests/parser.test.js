@@ -7,6 +7,9 @@ describe('Markdown Parser', () => {
 - [ ] Implement robust token authentication #42
   - **Labels:** \`security\`, \`backend\`
   - **Assignees:** \`@username\`
+  - **Priority:** \`High\`
+  - **Depends on:** \`#2, #3\`
+  - **Estimate:** \`5\`
   - <details><summary>Details</summary>
     Support JWT authentication and refresh tokens via secure HTTP-only cookies.
     Include test coverage for token expiration scenarios.
@@ -28,6 +31,9 @@ describe('Markdown Parser', () => {
     expect(tasks[0].section).toBe('Phase 1: Core Engine');
     expect(tasks[0].labels).toEqual(['security', 'backend']);
     expect(tasks[0].assignees).toEqual(['username']);
+    expect(tasks[0].priority).toBe('High');
+    expect(tasks[0].dependsOn).toEqual(['2', '3']);
+    expect(tasks[0].estimate).toBe('5');
     expect(tasks[0].details).toContain('Support JWT authentication');
 
     expect(tasks[1].title).toBe('Configure base CI/CD pipelines');
