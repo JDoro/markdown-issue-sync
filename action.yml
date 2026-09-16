@@ -9,8 +9,7 @@ inputs:
     required: false
   github_token:
     description: 'GitHub token for API access'
-    required: false
-    default: ""
+    required: true
 runs:
   using: 'node24'
   main: 'dist/index.js'
