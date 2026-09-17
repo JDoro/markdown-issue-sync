@@ -18,7 +18,7 @@ class GitHubClient {
     }
 
     if (metadataHeader) {
-      body = metadataHeader + '\n---\n\n' + body;
+      body = metadataHeader + (body ? '\n---\n\n' + body : '\n\n');
     }
 
     // Ensure properly escaped links and metadata
@@ -62,7 +62,7 @@ class GitHubClient {
     });
     return data;
   }
-  async updateIssueState(issueNumber, isClosed, title, labels, assignees) {
+  async updateIssueState(issueNumber, isClosed, title, labels, assignees, body) {
     const params = {
       owner: this.owner,
       repo: this.repo,
@@ -77,6 +77,9 @@ class GitHubClient {
     }
     if (Array.isArray(assignees)) {
         params.assignees = assignees;
+    }
+    if (body !== undefined && body !== null) {
+        params.body = body;
     }
     await this.octokit.issues.update(params);
   }

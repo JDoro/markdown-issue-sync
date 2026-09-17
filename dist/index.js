@@ -34659,7 +34659,7 @@ class GitHubClient {
     }
 
     if (metadataHeader) {
-      body = metadataHeader + '\n---\n\n' + body;
+      body = metadataHeader + (body ? '\n---\n\n' + body : '\n\n');
     }
 
     // Ensure properly escaped links and metadata
@@ -34703,7 +34703,7 @@ class GitHubClient {
     });
     return data;
   }
-  async updateIssueState(issueNumber, isClosed, title, labels, assignees) {
+  async updateIssueState(issueNumber, isClosed, title, labels, assignees, body) {
     const params = {
       owner: this.owner,
       repo: this.repo,
@@ -34718,6 +34718,9 @@ class GitHubClient {
     }
     if (Array.isArray(assignees)) {
         params.assignees = assignees;
+    }
+    if (body !== undefined && body !== null) {
+        params.body = body;
     }
     await this.octokit.issues.update(params);
   }
@@ -34919,9 +34922,15 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
         const existingTitle = existingIssue.title;
         const existingLabels = existingIssue.labels.map(l => l.name);
         const existingAssignees = existingIssue.assignees.map(a => a.login);
+        const existingBody = existingIssue.body || '';
+
+        const expectedBody = githubClient.generateIssueBody(task, filePath, repoUrl, defaultBranch);
+
+        const normalize = str => (str || '').replace(/\r\n/g, '\n');
 
         const stateChanged = existingState !== task.checked;
         const titleChanged = existingTitle !== task.title;
+        const bodyChanged = normalize(existingBody) !== normalize(expectedBody);
 
         const labelsChanged = task.labels && (
           task.labels.length !== existingLabels.length ||
@@ -34933,7 +34942,7 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
           !task.assignees.every(a => existingAssignees.includes(a))
         );
 
-        if (stateChanged || titleChanged || labelsChanged || assigneesChanged) {
+        if (stateChanged || titleChanged || labelsChanged || assigneesChanged || bodyChanged) {
             core.info(`Updating issue #${task.issueNumber} because changes were detected.`);
             await githubClient.updateIssueState(
               task.issueNumber,
