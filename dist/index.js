@@ -34950,7 +34950,7 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
               titleChanged ? task.title : null,
               labelsChanged ? task.labels : null,
               assigneesChanged ? task.assignees : null,
-              bodyChanged ? expectedBody : null
+              bodyChanged ? expectedBody : undefined
             );
         } else {
             core.info(`No changes detected for issue #${task.issueNumber}. Skipping update.`);
