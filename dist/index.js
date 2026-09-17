@@ -34651,6 +34651,17 @@ class GitHubClient {
   generateIssueBody(task, filePath, repoUrl, defaultBranch) {
     let body = task.details ? `${task.details}\n\n` : '';
 
+    let metadataHeader = '';
+    if (task.priority) metadataHeader += `**Priority:** ${task.priority}\n`;
+    if (task.estimate) metadataHeader += `**Estimate:** ${task.estimate}\n`;
+    if (task.dependsOn && task.dependsOn.length > 0) {
+      metadataHeader += `**Depends on:** ${task.dependsOn.map(id => '#' + id).join(', ')}\n`;
+    }
+
+    if (metadataHeader) {
+      body = metadataHeader + (body ? '\n---\n\n' + body : '\n\n');
+    }
+
     // Ensure properly escaped links and metadata
     const encodedFilePath = encodeURI(filePath).replace(/[#?()]/g, c => "%" + c.charCodeAt(0).toString(16).toUpperCase());
     const escapedFilePath = filePath.replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');
@@ -34692,7 +34703,7 @@ class GitHubClient {
     });
     return data;
   }
-  async updateIssueState(issueNumber, isClosed, title, labels, assignees) {
+  async updateIssueState(issueNumber, isClosed, title, labels, assignees, body) {
     const params = {
       owner: this.owner,
       repo: this.repo,
@@ -34707,6 +34718,9 @@ class GitHubClient {
     }
     if (Array.isArray(assignees)) {
         params.assignees = assignees;
+    }
+    if (body !== undefined && body !== null) {
+        params.body = body;
     }
     await this.octokit.issues.update(params);
   }
@@ -34724,6 +34738,9 @@ const TASK_REGEX = /^(\s*-\s*\[([ xX])\])\s+(.*?)(?:\s+#(\d+))?\s*$/;
 const HEADING_REGEX = /^(#+)\s+(.*)$/;
 const LABELS_REGEX = /^\s*-\s*\*\*Labels:\*\*\s*(.*)$/;
 const ASSIGNEES_REGEX = /^\s*-\s*\*\*Assignees:\*\*\s*(.*)$/;
+const PRIORITY_REGEX = /^\s*-\s*\*\*Priority:\*\*\s*(.*)$/;
+const DEPENDS_ON_REGEX = /^\s*-\s*\*\*Depends on:\*\*\s*(.*)$/;
+const ESTIMATE_REGEX = /^\s*-\s*\*\*Estimate:\*\*\s*(.*)$/;
 
 function parseMarkdown(content) {
   const lines = content.split(/\r?\n/);
@@ -34771,6 +34788,9 @@ function parseMarkdown(content) {
         section: currentSection,
         labels: [],
         assignees: [],
+        priority: null,
+        dependsOn: [],
+        estimate: null,
         details: null
       };
       tasks.push(currentTask);
@@ -34787,6 +34807,24 @@ function parseMarkdown(content) {
       const assigneesMatch = line.match(ASSIGNEES_REGEX);
       if (assigneesMatch) {
         currentTask.assignees = assigneesMatch[1].split(',').map(a => a.replace(/[`@]/g, '').trim()).filter(Boolean);
+        continue;
+      }
+
+      const priorityMatch = line.match(PRIORITY_REGEX);
+      if (priorityMatch) {
+        currentTask.priority = priorityMatch[1].replace(/`/g, '').trim();
+        continue;
+      }
+
+      const dependsOnMatch = line.match(DEPENDS_ON_REGEX);
+      if (dependsOnMatch) {
+        currentTask.dependsOn = dependsOnMatch[1].split(',').map(d => d.replace(/[`#]/g, '').trim()).filter(Boolean);
+        continue;
+      }
+
+      const estimateMatch = line.match(ESTIMATE_REGEX);
+      if (estimateMatch) {
+        currentTask.estimate = estimateMatch[1].replace(/`/g, '').trim();
         continue;
       }
 
@@ -34884,9 +34922,15 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
         const existingTitle = existingIssue.title;
         const existingLabels = existingIssue.labels.map(l => l.name);
         const existingAssignees = existingIssue.assignees.map(a => a.login);
+        const existingBody = existingIssue.body || '';
+
+        const expectedBody = githubClient.generateIssueBody(task, filePath, repoUrl, defaultBranch);
+
+        const normalize = str => (str || '').replace(/\r\n/g, '\n');
 
         const stateChanged = existingState !== task.checked;
         const titleChanged = existingTitle !== task.title;
+        const bodyChanged = normalize(existingBody) !== normalize(expectedBody);
 
         const labelsChanged = task.labels && (
           task.labels.length !== existingLabels.length ||
@@ -34898,14 +34942,15 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
           !task.assignees.every(a => existingAssignees.includes(a))
         );
 
-        if (stateChanged || titleChanged || labelsChanged || assigneesChanged) {
+        if (stateChanged || titleChanged || labelsChanged || assigneesChanged || bodyChanged) {
             core.info(`Updating issue #${task.issueNumber} because changes were detected.`);
             await githubClient.updateIssueState(
               task.issueNumber,
               stateChanged ? task.checked : existingState,
               titleChanged ? task.title : null,
               labelsChanged ? task.labels : null,
-              assigneesChanged ? task.assignees : null
+              assigneesChanged ? task.assignees : null,
+              bodyChanged ? expectedBody : undefined
             );
         } else {
             core.info(`No changes detected for issue #${task.issueNumber}. Skipping update.`);

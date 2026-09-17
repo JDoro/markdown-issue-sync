@@ -98,6 +98,9 @@ Because this is a JavaScript action, the code in `src/` must be compiled into `d
 - [ ] Implement robust token authentication
   - **Labels:** \`security\`, \`backend\`
   - **Assignees:** \`@username\`
+  - **Priority:** `High`
+  - **Estimate:** `5`
+  - **Depends on:** `#2, #3`
   - <details><summary>Details</summary>
     Support JWT authentication and refresh tokens via secure HTTP-only cookies.
     Include test coverage for token expiration scenarios.
