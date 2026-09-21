@@ -55,6 +55,15 @@ describe('Markdown Parser', () => {
     expect(lines[taskIndex]).toBe('- [ ] A new task without an issue #101');
   });
 
+  test('replaces existing issue number in markdown line', () => {
+    const { lines, tasks } = parseMarkdown(markdownContent);
+    const taskIndex = tasks[0].lineIndex;
+
+    updateMarkdownLineWithIssue(lines, taskIndex, 101);
+
+    expect(lines[taskIndex]).toBe('- [ ] Implement robust token authentication #101');
+  });
+
   test('updates task state to closed', () => {
     const { lines, tasks } = parseMarkdown(markdownContent);
     const taskIndex = tasks[0].lineIndex;

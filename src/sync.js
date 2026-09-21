@@ -15,7 +15,24 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
   let changed = false;
 
   for (const task of tasks) {
-    if (!task.issueNumber) {
+    let needsCreation = !task.issueNumber;
+    let existingIssue = null;
+
+    if (!needsCreation) {
+      try {
+        core.info(`Checking existing state for issue #${task.issueNumber}`);
+        existingIssue = await githubClient.getIssue(task.issueNumber);
+      } catch (error) {
+        if (error.status === 404) {
+          core.info(`Issue #${task.issueNumber} not found. Will create a new one.`);
+          needsCreation = true;
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (needsCreation) {
       core.info(`Creating issue for: ${task.title}`);
       const issueNumber = await githubClient.createIssue(task, filePath, repoUrl, defaultBranch);
       updateMarkdownLineWithIssue(lines, task.lineIndex, issueNumber);
@@ -34,9 +51,6 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
       changed = true;
     } else {
         // Sync state if already exists
-        core.info(`Checking existing state for issue #${task.issueNumber}`);
-        const existingIssue = await githubClient.getIssue(task.issueNumber);
-
         const existingState = existingIssue.state === 'closed';
         const existingTitle = existingIssue.title;
         const existingLabels = existingIssue.labels.map(l => l.name);
