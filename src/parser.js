@@ -117,8 +117,12 @@ function parseMarkdown(content) {
 function updateMarkdownLineWithIssue(lines, lineIndex, issueNumber) {
   const line = lines[lineIndex];
   const taskMatch = line.match(TASK_REGEX);
-  if (taskMatch && !taskMatch[4]) {
-    lines[lineIndex] = `${line.replace(/\s+$/, '')} #${issueNumber}`;
+  if (taskMatch) {
+    if (!taskMatch[4]) {
+      lines[lineIndex] = `${line.replace(/\s+$/, '')} #${issueNumber}`;
+    } else {
+      lines[lineIndex] = line.replace(new RegExp(`\\s+#${taskMatch[4]}(\\s*)$`), ` #${issueNumber}$1`);
+    }
   }
 }
 
