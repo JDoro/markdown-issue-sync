@@ -31,7 +31,7 @@ jobs:
         with:
           token: ${{ secrets.custom_token || github.token }}
       - name: Sync Markdown and Issues
-        uses: ./
+        uses: JDoro/markdown-issue-sync@v1
         with:
           file_path: ${{ inputs.file_path }}
           direction: ${{ inputs.direction }}
