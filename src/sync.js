@@ -23,8 +23,12 @@ async function syncToIssues(filePath, githubClient, repoUrl, defaultBranch) {
         core.info(`Checking existing state for issue #${task.issueNumber}`);
         existingIssue = await githubClient.getIssue(task.issueNumber);
       } catch (error) {
-        if (error.status === 404) {
-          core.info(`Issue #${task.issueNumber} not found. Will create a new one.`);
+        if (
+          error.status === 404 ||
+          error.status === 410 ||
+          (error.status === 403 && error.message && error.message.includes('Resource not accessible by integration'))
+        ) {
+          core.info(`Issue #${task.issueNumber} not found or inaccessible. Will create a new one.`);
           needsCreation = true;
         } else {
           throw error;

@@ -46,6 +46,25 @@ describe('syncToIssues', () => {
     expect(writtenContent).toBe('- [ ] Task with old missing issue #456');
 
     // Check correct info message logged
-    expect(core.info).toHaveBeenCalledWith('Issue #123 not found. Will create a new one.');
+    expect(core.info).toHaveBeenCalledWith('Issue #123 not found or inaccessible. Will create a new one.');
   });
+
+  test('creates a new issue when 403 Resource not accessible by integration is returned', async () => {
+    const mockContent = '- [ ] Task with old PR issue #123';
+    fs.readFileSync.mockReturnValue(mockContent);
+
+    // Mock getIssue to reject with a 403
+    mockGithubClient.getIssue.mockRejectedValue({ status: 403, message: 'Resource not accessible by integration' });
+    // Mock createIssue to return a new issue number
+    mockGithubClient.createIssue.mockResolvedValue(456);
+
+    await syncToIssues('ROADMAP.md', mockGithubClient, 'repoUrl', 'main');
+
+    expect(mockGithubClient.getIssue).toHaveBeenCalledWith(123);
+    expect(mockGithubClient.createIssue).toHaveBeenCalled();
+    const writtenContent = fs.writeFileSync.mock.calls[0][1];
+    expect(writtenContent).toBe('- [ ] Task with old PR issue #456');
+    expect(core.info).toHaveBeenCalledWith('Issue #123 not found or inaccessible. Will create a new one.');
+  });
+
 });
