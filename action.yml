@@ -53,9 +53,12 @@ runs:
           echo "No changes to commit."
         else
           git commit -m "chore: sync issues with markdown [skip ci]"
+          pushed=false
           for i in {1..3}; do
-            git p""ush origin HEAD && break || echo "Push failed, retrying..."
+            if git p""ush origin HEAD; then pushed=true; break; fi
+            echo "Push failed, retrying..."
             git p""ull --rebase -X ours origin "$GITHUB_REF_NAME" || e""xit 1
             sleep 2
           done
+          [ "$pushed" = true ] || { echo "Push failed after retries"; e""xit 1; }
         fi
