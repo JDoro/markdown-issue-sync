@@ -1,15 +1,19 @@
 # Markdown Issue Sync
 
-A JavaScript GitHub Action that bi-directionally syncs Markdown roadmap/task files with GitHub Issues.
+A zero-dependency JavaScript GitHub Action that bi-directionally syncs Markdown roadmap/task files with GitHub Issues.
 
 ## Features
 
+- **Zero-Dependency Engine:** Uses only Node.js built-ins (`node:fs`, `node:crypto`, `node:test`) and runs instantly via `actions/github-script`. No npm installs, build steps, or `node_modules` vulnerabilities.
 - **Markdown to Issues:** Parse a Markdown file and create issues for tasks (`- [ ] Task`). Automatically adds the issue number back to the Markdown file (`- [ ] Task #1`). Also syncs metadata like labels and assignees.
-- **Issues to Markdown:** When an issue is closed or reopened, this action can update the corresponding task's checkbox in the Markdown file (`[x]` or `[ ]`).
+- **Issues to Markdown:** When an issue is closed or reopened, this action updates the corresponding task's checkbox in the Markdown file (`[x]` or `[ ]`).
+- **Resilient Content Syncing:** Content hashes are securely embedded within hidden metadata (`<!-- markdown-issue-sync: ... -->`) in your issues, ensuring updates only trigger when task titles or details actually change.
+- **Agentic Context Awareness:** Sub-issues are automatically nested using GitHub's sub-issue API based on Markdown indentation. Optional YAML frontmatter (`---`) lets you prepend broad context, defaults, and instructions to all child issues.
+- **Idempotency Guard & Dry Run:** Dry-run modes generate structured outputs mapping planned operations without API side-effects, whilst built-in recovery catches orphaned tasks before recreating issues.
 
-## Setup
+## Usage
 
-The fastest way to use this action is the bundled reusable workflow. Create `.github/workflows/issue-plan-sync.yml` in your consumer repository:
+Simply invoke the composite action. `github_token` and `file_path` are required.
 
 ```yaml
 name: Issue Plan Sync
@@ -25,50 +29,6 @@ on:
 
 jobs:
   sync:
-    uses: JDoro/markdown-issue-sync/.github/workflows/sync.yml@v1
-    with:
-      file_path: 'ROADMAP.md'
-```
-
-That's it. The reusable workflow handles permissions (`contents: write`, `issues: write`), concurrency guarding, checkout, the token, and picking the right sync direction for each trigger.
-
-### How Direction Is Auto-Detected
-
-When the `direction` input is omitted, the action infers it from the triggering event:
-
-- `push`, `workflow_dispatch`, `schedule` → `to-issues`
-- `issues` (`closed`/`reopened`) → `to-markdown`
-- `issues` with other actions (e.g. `opened`, `labeled`) → skipped with a notice; no sync runs
-- anything else → the run fails with an error explaining the supported events
-
-Set `direction` explicitly to override auto-detection.
-
-### Custom Token
-
-The reusable workflow uses the caller's `github.token` by default. To use a different token (e.g. a PAT), pass it as a secret:
-
-```yaml
-jobs:
-  sync:
-    uses: JDoro/markdown-issue-sync/.github/workflows/sync.yml@v1
-    with:
-      file_path: 'ROADMAP.md'
-    secrets:
-      custom_token: ${{ secrets.MY_PAT }}
-```
-
-### Allowing Private Repo Access
-
-If you are using this action from another private repository, ensure that the calling repository has access to this action repository in GitHub Actions settings (Settings -> Actions -> General -> Access). This applies to both the action and the reusable workflow.
-
-### Advanced: Using the Action Directly
-
-You can also call the action in your own workflow. `direction` and `github_token` are optional now; only `file_path` is required:
-
-```yaml
-jobs:
-  sync:
-    if: github.event_name != 'issues' || github.event.action == 'closed' || github.event.action == 'reopened'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -79,18 +39,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Sync Markdown and Issues
-        uses: JDoro/markdown-issue-sync@v1
+        uses: JDoro/markdown-issue-sync@main
         with:
           file_path: 'ROADMAP.md'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: 'false'
 ```
 
-A single job handles both directions: pushes of the Markdown file sync to issues, and issue close/reopen events sync back to the Markdown checkboxes. Commit messages produced by the action include `[skip ci]`, so the push-backs never trigger the workflow again.
+### Action Outputs
 
-### Development and Building
+The action exposes the following outputs containing stringified JSON arrays of issue numbers processed:
+- `created_issues`
+- `updated_issues`
+- `closed_issues`
+- `reopened_issues`
 
-Because this is a JavaScript action, the code in `src/` must be compiled into `dist/index.js` before it can be run by GitHub Actions. If you make any changes to the source code, you must run `npm run build` and commit the updated `dist/` directory.
+When the action completes, a detailed Job Summary table will appear in your GitHub Actions dashboard showing these metrics.
 
 ## Markdown Syntax Example
+
+### YAML Frontmatter Config (Optional)
+
+At the very top of your file, you can specify default labels, assignees, and context that applies to every task.
+
+```yaml
+---
+default_labels: [enhancement, v2]
+default_assignees: [JDoro]
+context_footer: |
+  **Project Goal:** Launch MVP by Q4.
+  Refer to architectural docs before opening PRs.
+---
+```
+
+### Task Lists and Metadata
 
 ```markdown
 ## Phase 1: Core Engine
@@ -105,6 +87,8 @@ Because this is a JavaScript action, the code in `src/` must be compiled into `d
     Support JWT authentication and refresh tokens via secure HTTP-only cookies.
     Include test coverage for token expiration scenarios.
     </details>
+  - [ ] Support child tokens
+    - **Labels:** \`sub-issue\`
 ```
 
-When pushed, this will create an issue, add labels and assignees, include the `details` content in the issue body, and append `#<issue_number>` to the Markdown task list.
+When pushed, this creates an issue, adds the labels/assignees/details, includes the context footer, links the indented tasks as native sub-issues, and appends `#<issue_number>` to the Markdown tasks. Code fences (` ``` ` or `~~~`) will be safely ignored.
