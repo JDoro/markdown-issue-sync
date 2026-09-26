@@ -158,7 +158,8 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
       // Idempotency check
       const orphanedIssue = allIssues.find(i =>
         i.body && i.body.includes(`<!-- markdown-issue-sync: {"file":"${filePath.replace(/"/g, '&quot;').replace(/-->/g, '--&gt;')}"`) &&
-        (i.body.includes(`"hash":"${task.hash}"`) || i.title === task.title)
+        i.body.includes(`"hash":"${task.hash}"`) &&
+        !tasks.some(t => t !== task && t.issueNumber === i.number)
       );
 
       if (orphanedIssue) {

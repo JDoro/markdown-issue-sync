@@ -100,7 +100,11 @@ function computeHash(task) {
     body: task.details || '',
     labels: [...task.labels].sort(),
     assignees: [...task.assignees].sort(),
-    parentIssueNumber: task.parentIssueNumber || null
+    parentIssueNumber: task.parentIssueNumber || null,
+    priority: task.priority || null,
+    estimate: task.estimate || null,
+    dependsOn: [...task.dependsOn].sort(),
+    section: task.section || null
   };
   return crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex').substring(0, 12);
 }
@@ -136,12 +140,17 @@ function parseMarkdown(content) {
       }
     }
 
-    if (trimmedLine.startsWith('```') || trimmedLine.startsWith('~~~')) {
-      inCodeFence = !inCodeFence;
+    const fenceMatch = trimmedLine.match(/^(`{3,}|~{3,})(.*)$/);
+    if (!inCodeFence && fenceMatch && !(fenceMatch[1][0] === '`' && fenceMatch[2].includes('`'))) {
+      inCodeFence = { char: fenceMatch[1][0], len: fenceMatch[1].length };
       continue;
     }
 
     if (inCodeFence) {
+      if (fenceMatch && fenceMatch[1][0] === inCodeFence.char &&
+          fenceMatch[1].length >= inCodeFence.len && fenceMatch[2].trim() === '') {
+        inCodeFence = false;
+      }
       continue;
     }
 
