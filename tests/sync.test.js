@@ -36,8 +36,64 @@ context_footer: >
   assert.equal(tasks[0].labels[1], 'ui');
 });
 
-test('Bidirectional state toggling and dry run simulate', () => {
+test('Bidirectional state toggling and dry run simulate', async () => {
   const sync = require('../src/sync');
-  assert.equal(typeof sync, 'function');
-  // the core logic is in sync.js and is mocked in tests if needed, but parser handles parsing states well.
+  const assert = require('node:assert/strict');
+
+  let writtenData = '';
+  const mockFs = {
+    existsSync: () => true,
+    readFileSync: () => '- [ ] Some new task',
+    writeFileSync: (path, data) => { writtenData = data; }
+  };
+
+  const coreMock = {
+    setFailed: () => {},
+    info: () => {},
+    notice: () => {},
+    warning: () => {},
+    setOutput: () => {},
+    summary: {
+      addHeading: function() { return this; },
+      addTable: function() { return this; },
+      write: async function() {}
+    }
+  };
+
+  const githubMock = {
+    paginate: async () => [],
+    rest: {
+      issues: {
+        listForRepo: async () => [],
+        create: async () => ({ data: { number: 42, id: 100 } }),
+        update: async () => {},
+        get: async () => { throw new Error('Not found') }
+      }
+    }
+  };
+
+  process.env.INPUT_FILE_PATH = 'fake.md';
+  process.env.INPUT_DIRECTION = 'to-issues';
+  process.env.INPUT_DRY_RUN = 'true';
+
+  await sync({
+    github: githubMock,
+    core: coreMock,
+    context: { repo: { owner: 'test', repo: 'repo' }, payload: {} },
+    _fs: mockFs
+  });
+
+  // Dry run shouldn't write files
+  assert.equal(writtenData, '');
+
+  // Real run
+  process.env.INPUT_DRY_RUN = 'false';
+  await sync({
+    github: githubMock,
+    core: coreMock,
+    context: { repo: { owner: 'test', repo: 'repo' }, payload: {} },
+    _fs: mockFs
+  });
+
+  assert.match(writtenData, /#42/);
 });
