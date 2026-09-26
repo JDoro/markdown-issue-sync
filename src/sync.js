@@ -61,6 +61,11 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
     core.info(`Auto-detected sync direction: ${direction}`);
   }
 
+  if (direction !== "to-issues" && direction !== "to-markdown") {
+    core.setFailed(`Invalid direction: ${direction}. Must be \`to-issues\` or \`to-markdown\`.`);
+    return;
+  }
+
   if (!_fs.existsSync(filePath)) {
     core.setFailed(`File not found: ${filePath}`);
     return;
@@ -72,6 +77,10 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
   const { lines, tasks, frontmatter } = parseMarkdown(content);
 
   if (direction === 'to-markdown') {
+    if (!context.payload.issue) {
+      core.setFailed('Direction "to-markdown" must be triggered by an issue event.');
+      return;
+    }
     const issueNumber = context.payload.issue.number;
     const isClosed = context.payload.issue.state === 'closed';
     const task = tasks.find(t => t.issueNumber === issueNumber);
