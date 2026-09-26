@@ -114,17 +114,15 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
 
   // Pre-fetch all open and closed issues for idempotency guard
   let allIssues = [];
-  if (!isDryRun || true) {
-    try {
-      allIssues = await github.paginate(github.rest.issues.listForRepo, {
-        owner,
-        repo,
-        state: 'all',
-        per_page: 100
-      });
-    } catch (e) {
-      core.warning(`Could not pre-fetch issues: ${e.message}`);
-    }
+  try {
+    allIssues = await github.paginate(github.rest.issues.listForRepo, {
+      owner,
+      repo,
+      state: 'all',
+      per_page: 100
+    });
+  } catch (e) {
+    core.warning(`Could not pre-fetch issues: ${e.message}`);
   }
 
   const getIssueIdByNumber = (num) => {
