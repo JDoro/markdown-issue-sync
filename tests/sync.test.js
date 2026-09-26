@@ -36,7 +36,7 @@ context_footer: >
   assert.equal(tasks[0].labels[1], 'ui');
 });
 
-test('Bidirectional state toggling and dry run simulate', async () => {
+test('Bidirectional state toggling and dry run simulate', async (t) => {
   const sync = require('../src/sync');
   const assert = require('node:assert/strict');
 
@@ -71,6 +71,22 @@ test('Bidirectional state toggling and dry run simulate', async () => {
       }
     }
   };
+
+  const prevEnv = {
+    INPUT_FILE_PATH: process.env.INPUT_FILE_PATH,
+    INPUT_DIRECTION: process.env.INPUT_DIRECTION,
+    INPUT_DRY_RUN: process.env.INPUT_DRY_RUN
+  };
+
+  t.after(() => {
+    for (const [key, value] of Object.entries(prevEnv)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
+    }
+  });
 
   process.env.INPUT_FILE_PATH = 'fake.md';
   process.env.INPUT_DIRECTION = 'to-issues';
