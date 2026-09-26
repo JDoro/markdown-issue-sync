@@ -253,8 +253,8 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
           if (hashDiffers) {
              updateParams.title = task.title;
              updateParams.body = expectedBody;
-             if (task.labels && task.labels.length > 0) updateParams.labels = task.labels;
-             if (task.assignees && task.assignees.length > 0) updateParams.assignees = task.assignees;
+             updateParams.labels = task.labels;
+             updateParams.assignees = task.assignees;
           }
 
           await github.rest.issues.update(updateParams);
