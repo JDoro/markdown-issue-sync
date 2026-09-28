@@ -125,8 +125,13 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
     core.warning(`Could not pre-fetch issues: ${e.message}`);
   }
 
+  const issuesByNumber = new Map();
+  for (const issue of allIssues) {
+    issuesByNumber.set(issue.number, issue);
+  }
+
   const getIssueIdByNumber = (num) => {
-    const issue = allIssues.find(i => i.number === num);
+    const issue = issuesByNumber.get(num);
     return issue ? issue.id : null;
   };
 
@@ -140,7 +145,7 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
     let needsCreation = !task.issueNumber;
 
     if (!needsCreation) {
-      existingIssue = allIssues.find(i => i.number === task.issueNumber);
+      existingIssue = issuesByNumber.get(task.issueNumber) || null;
       if (!existingIssue && !isDryRun) {
          try {
            const { data } = await github.rest.issues.get({ owner, repo, issue_number: task.issueNumber });
