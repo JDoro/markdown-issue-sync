@@ -135,6 +135,13 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
     return issue ? issue.id : null;
   };
 
+  const assignedTaskIssues = new Set();
+  for (const t of tasks) {
+    if (t.issueNumber) assignedTaskIssues.add(t.issueNumber);
+  }
+  const escapedFilePath = filePath.replace(/"/g, '&quot;').replace(/-->/g, '--&gt;');
+  const searchFileStr = `<!-- markdown-issue-sync: {"file":"${escapedFilePath}"`;
+
   for (const task of tasks) {
     if (task.parentTaskRef && task.parentTaskRef.issueNumber) {
       task.parentIssueNumber = task.parentTaskRef.issueNumber;
@@ -159,15 +166,19 @@ module.exports = async ({ github, context, core, _fs = fs }) => {
 
     if (needsCreation) {
       // Idempotency check
-      const orphanedIssue = allIssues.find(i =>
-        i.body && i.body.includes(`<!-- markdown-issue-sync: {"file":"${filePath.replace(/"/g, '&quot;').replace(/-->/g, '--&gt;')}"`) &&
-        i.body.includes(`"hash":"${task.hash}"`) &&
-        !tasks.some(t => t !== task && t.issueNumber === i.number)
-      );
+      const hashStr = `"hash":"${task.hash}"`;
+      const orphanedIssue = allIssues.find(i => {
+        if (!i.body) return false;
+        if (!i.body.includes(searchFileStr)) return false;
+        if (!i.body.includes(hashStr)) return false;
+        if (assignedTaskIssues.has(i.number) && task.issueNumber !== i.number) return false;
+        return true;
+      });
 
       if (orphanedIssue) {
         core.info(`Found orphaned issue #${orphanedIssue.number} for task: ${task.title}. Re-linking.`);
         task.issueNumber = orphanedIssue.number;
+        assignedTaskIssues.add(task.issueNumber);
         needsCreation = false;
         existingIssue = orphanedIssue;
 
