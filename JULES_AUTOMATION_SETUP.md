@@ -25,6 +25,8 @@ on:
 
 jobs:
   call-maintenance:
+    permissions:
+      issues: write
     if: "github.event.sender.login != 'google-labs-jules[bot]'"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-maintenance-template.yml@main
     with:
@@ -48,6 +50,8 @@ on:
 
 jobs:
   call-generate-tests:
+    permissions:
+      issues: write
     if: "github.event.sender.login != 'google-labs-jules[bot]'"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-tdd-generate-tests-template.yml@main
     with:
@@ -66,6 +70,8 @@ on:
 
 jobs:
   call-implement:
+    permissions:
+      issues: write
     if: "github.event.sender.login != 'google-labs-jules[bot]' && contains(github.event.pull_request.labels.*.name, 'tdd-implement')"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-tdd-implement-template.yml@main
     with:
@@ -86,6 +92,8 @@ on:
 
 jobs:
   call-ci-failure:
+    permissions:
+      issues: write
     if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.workflow_run.conclusion == 'failure'"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-ci-failure-template.yml@main
     with:
