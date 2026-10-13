@@ -1,6 +1,6 @@
 name: Jules CI Failure Template
 
-# Caller workflow MUST check !contains(github.actor, 'jules') before calling this, to prevent infinite loops.
+# Caller workflow MUST check github.event.sender.login != 'google-labs-jules[bot]' before calling this, to prevent infinite loops.
 on:
   workflow_call:
     inputs:

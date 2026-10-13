@@ -10,7 +10,7 @@ This repository contains reusable GitHub Action workflows designed to dispatch a
 - `jules-ci-failure-template.yml`: Creates an issue to fix CI failures on a PR.
 
 ## Important Constraint
-**CRITICAL**: You MUST add `if: !contains(github.actor, 'jules')` (or similar) to any calling workflow. Since Jules creates PRs and commits code, allowing Jules to trigger these workflows can result in runaway infinite loops.
+**CRITICAL**: You MUST add `if: github.event.sender.login != 'google-labs-jules[bot]'` (or similar) to any calling workflow. Since Jules creates PRs and commits code, allowing Jules to trigger these workflows can result in runaway infinite loops.
 
 ## How to Call These Reusable Workflows
 
@@ -25,7 +25,7 @@ on:
 
 jobs:
   call-maintenance:
-    if: "!contains(github.actor, 'jules')"
+    if: "github.event.sender.login != 'google-labs-jules[bot]'"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-maintenance-template.yml@main
     with:
       focus_area: 'the recent commits, checking for missing unit tests, and auditing npm dependencies'
@@ -48,7 +48,7 @@ on:
 
 jobs:
   call-generate-tests:
-    if: "!contains(github.actor, 'jules')"
+    if: "github.event.sender.login != 'google-labs-jules[bot]'"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-tdd-generate-tests-template.yml@main
     with:
       feature_title: ${{ github.event.inputs.feature_title }}
@@ -66,7 +66,7 @@ on:
 
 jobs:
   call-implement:
-    if: "!contains(github.actor, 'jules') && contains(github.event.pull_request.labels.*.name, 'tdd-implement')"
+    if: "github.event.sender.login != 'google-labs-jules[bot]' && contains(github.event.pull_request.labels.*.name, 'tdd-implement')"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-tdd-implement-template.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
@@ -86,7 +86,7 @@ on:
 
 jobs:
   call-ci-failure:
-    if: "!contains(github.actor, 'jules') && github.event.workflow_run.conclusion == 'failure'"
+    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.workflow_run.conclusion == 'failure'"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-ci-failure-template.yml@main
     with:
       pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
