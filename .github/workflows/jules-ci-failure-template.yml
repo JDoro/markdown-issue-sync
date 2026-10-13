@@ -37,5 +37,5 @@ jobs:
               title: `Fix CI Failure on PR #${process.env.PR_NUMBER}`,
               body: `Please fix the implementation on branch \`${process.env.BRANCH_NAME}\` based on the following CI failure:\n\n\`\`\`\n${process.env.ERROR_LOG}\n\`\`\`\n\n@jules`,
               assignees: ['jules'],
-              labels: ['jules-task']
+              labels: ['jules', 'jules-task']
             })

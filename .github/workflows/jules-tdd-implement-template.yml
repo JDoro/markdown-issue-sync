@@ -32,5 +32,5 @@ jobs:
               title: `Implement Logic for PR #${process.env.PR_NUMBER}`,
               body: `Please checkout branch \`${process.env.BRANCH_NAME}\`, write the code to make the tests pass, and commit directly to that branch.\n\n@jules`,
               assignees: ['jules'],
-              labels: ['jules-task']
+              labels: ['jules', 'jules-task']
             })

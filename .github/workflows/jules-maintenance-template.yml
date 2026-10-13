@@ -28,5 +28,5 @@ jobs:
               title: 'Weekly Maintenance',
               body: `Please review the following focus area: ${process.env.FOCUS_AREA}.\n\n@jules`,
               assignees: ['jules'],
-              labels: ['jules-task']
+              labels: ['jules', 'jules-task']
             })

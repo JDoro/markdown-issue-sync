@@ -32,5 +32,5 @@ jobs:
               title: `Write Tests: ${process.env.FEATURE_TITLE}`,
               body: `Please ONLY write failing unit tests based on the following feature description:\n\n${process.env.FEATURE_DESC}\n\nOpen a PR with just the tests.\n\n@jules`,
               assignees: ['jules'],
-              labels: ['jules-task']
+              labels: ['jules', 'jules-task']
             })
