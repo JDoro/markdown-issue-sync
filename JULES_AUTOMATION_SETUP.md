@@ -91,13 +91,36 @@ on:
     types: [completed]
 
 jobs:
+  find-pr:
+    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.workflow_run.conclusion == 'failure'"
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+      contents: read
+    outputs:
+      pr_number: ${{ steps.lookup.outputs.pr_number }}
+    steps:
+      - id: lookup
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          PR=$(gh api "repos/${{ github.repository }}/commits/${HEAD_SHA}/pulls" \
+            --jq '[.[] | select(.state == "open")][0].number // empty')
+          echo "pr_number=${PR}" >> "$GITHUB_OUTPUT"
+
   call-ci-failure:
+    needs: find-pr
+    if: "needs.find-pr.outputs.pr_number != ''"
     permissions:
       issues: write
-    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.workflow_run.conclusion == 'failure'"
+      pull-requests: read
+      contents: read
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-ci-failure-template.yml@main
     with:
-      pr_number: ${{ github.event.workflow_run.pull_requests[0].number }}
+      pr_number: ${{ needs.find-pr.outputs.pr_number }}
       branch_name: ${{ github.event.workflow_run.head_branch }}
       error_log: 'Fetch this log in a prior job or pass a link.'
 ```
+
+The PR number is resolved from `workflow_run.head_sha` because `workflow_run.pull_requests[0].number` is often empty (fork PRs, API-created PRs, push-only runs). Runs with no associated open PR are skipped: `find-pr` outputs an empty number and `call-ci-failure` does not run.
