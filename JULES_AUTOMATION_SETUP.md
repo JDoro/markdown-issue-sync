@@ -66,7 +66,7 @@ Triggers `jules-tdd-implement-template.yml` when a PR labeled `tdd-implement` is
 name: Implement TDD Logic via Jules
 on:
   pull_request:
-    types: [opened, labeled]
+    types: [opened, synchronize, labeled]
 
 jobs:
   call-implement:
