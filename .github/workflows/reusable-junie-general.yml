@@ -1,0 +1,26 @@
+name: Junie General Workflow
+
+on:
+  workflow_call:
+    secrets:
+      api_key:
+        description: 'Junie API key'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  junie:
+    runs-on: ubuntu-latest
+    if: contains(github.event.comment.body, '@junie-agent')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Junie
+        uses: JetBrains/junie-github-action@v1
+        with:
+          junie_api_key: ${{ secrets.api_key }}

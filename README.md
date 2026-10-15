@@ -92,3 +92,49 @@ context_footer: |
 ```
 
 When pushed, this creates an issue, adds the labels/assignees/details, includes the context footer, links the indented tasks as native sub-issues, and appends `#<issue_number>` to the Markdown tasks. Code fences (` ``` ` or `~~~`) will be safely ignored.
+
+## Junie Reusable Workflows
+
+This repository also includes reusable workflows for integrating [JetBrains Junie](https://plugins.jetbrains.com/plugin/22533-junie--ai-agent) into your repositories. These workflows allow Junie to operate on issue/PR comments and automate fixes for automated code review comments.
+
+### 1. General Junie Workflow
+
+This workflow triggers Junie whenever a user mentions `@junie-agent` in an issue or pull request comment.
+
+To use it, create a file like `.github/workflows/junie.yml` in your repository:
+
+```yaml
+name: Junie
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-junie:
+    uses: JDoro/markdown-issue-sync/.github/workflows/reusable-junie-general.yml@main
+    secrets:
+      api_key: ${{ secrets.JUNIE_API_KEY }}
+```
+
+### 2. Auto-Fix Workflow
+
+This workflow triggers Junie to automatically fix issues based on feedback left by automated bot reviewers (like `kilocode-bot`).
+
+To use it, create a file like `.github/workflows/junie-autofix.yml` in your repository:
+
+```yaml
+name: Junie Auto-Fix
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-junie-autofix:
+    uses: JDoro/markdown-issue-sync/.github/workflows/reusable-junie-autofix.yml@main
+    with:
+      bot_username: 'kilocode-bot' # Optional, defaults to 'kilocode-bot'
+    secrets:
+      api_key: ${{ secrets.JUNIE_API_KEY }}
+```

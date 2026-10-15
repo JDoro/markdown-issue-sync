@@ -1,0 +1,33 @@
+name: Junie Auto-Fix Workflow
+
+on:
+  workflow_call:
+    inputs:
+      bot_username:
+        description: 'Username of the bot that triggered the autofix'
+        type: string
+        default: 'kilocode-bot'
+        required: false
+    secrets:
+      api_key:
+        description: 'Junie API key'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  junie:
+    runs-on: ubuntu-latest
+    if: github.event.comment.user.login == inputs.bot_username
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Junie Auto-Fix
+        uses: JetBrains/junie-github-action@v1
+        with:
+          junie_api_key: ${{ secrets.api_key }}
+          custom_prompt: "Implement the following feedback provided by the automated reviewer."
