@@ -60,19 +60,19 @@ jobs:
 ```
 
 ### 3. TDD Implement Logic (Pull Request Trigger)
-Triggers `jules-tdd-implement-template.yml` when a PR labeled `tdd-implement` is opened.
+Triggers `jules-tdd-implement-template.yml` when the `tdd-implement` label is added to a PR.
 
 ```yaml
 name: Implement TDD Logic via Jules
 on:
   pull_request:
-    types: [opened, synchronize, labeled]
+    types: [labeled]
 
 jobs:
   call-implement:
     permissions:
       issues: write
-    if: "github.event.sender.login != 'google-labs-jules[bot]' && contains(github.event.pull_request.labels.*.name, 'tdd-implement')"
+    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.label.name == 'tdd-implement'"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-tdd-implement-template.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
