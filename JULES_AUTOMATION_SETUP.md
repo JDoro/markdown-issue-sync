@@ -94,7 +94,7 @@ on:
 
 jobs:
   find-pr:
-    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.workflow_run.conclusion == 'failure'"
+    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_repository.full_name == github.repository"
     runs-on: ubuntu-latest
     permissions:
       pull-requests: read
@@ -125,4 +125,4 @@ jobs:
       error_log: 'Fetch this log in a prior job or pass a link.'
 ```
 
-The PR number is resolved from `workflow_run.head_sha` because `workflow_run.pull_requests[0].number` is often empty (fork PRs, API-created PRs, push-only runs). Runs with no associated open PR are skipped: `find-pr` outputs an empty number and `call-ci-failure` does not run.
+The PR number is resolved from `workflow_run.head_sha` because `workflow_run.pull_requests[0].number` is often empty (fork PRs, API-created PRs, push-only runs). Runs from forks are skipped entirely (`head_repository.full_name` must equal `github.repository`), because `head_branch` is the fork's branch name and does not exist in the base repository. Runs with no associated open PR are skipped: `find-pr` outputs an empty number and `call-ci-failure` does not run.
