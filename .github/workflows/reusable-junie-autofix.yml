@@ -40,8 +40,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          marker='<!-- junie-fork-unsupported -->'
+          existing=$(gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            --jq "map(select(.body | contains(\"$marker\"))) | length" | paste -sd+ - | bc)
+          if [ "${existing:-0}" -gt 0 ]; then
+            echo "Fork-unsupported comment already posted; skipping."
+            exit 0
+          fi
           gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" \
-            --body "Junie does not support pull requests from forks, because it cannot push changes back to the fork branch."
+            --body "$marker
+          Junie does not support pull requests from forks, because it cannot push changes back to the fork branch."
 
       - name: Checkout repository
         if: ${{ steps.pr.outputs.fork != 'true' }}
