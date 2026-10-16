@@ -15,10 +15,22 @@ permissions:
 jobs:
   junie:
     runs-on: ubuntu-latest
-    if: ${{ contains(github.event.comment.body, '@junie-agent') }}
+    if: ${{ contains(github.event.comment.body, '@junie-agent') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) }}
     steps:
+      - name: Resolve PR branch
+        id: pr
+        if: ${{ github.event.issue.pull_request }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}" \
+            --jq '"ref=" + .head.ref, "repo=" + .head.repo.full_name' >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.pr.outputs.repo || github.repository }}
+          ref: ${{ steps.pr.outputs.ref || '' }}
 
       - name: Run Junie
         uses: JetBrains/junie-github-action@v1

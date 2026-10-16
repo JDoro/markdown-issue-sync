@@ -99,7 +99,7 @@ This repository also includes reusable workflows for integrating [JetBrains Juni
 
 ### 1. General Junie Workflow
 
-This workflow triggers Junie whenever a user mentions `@junie-agent` in an issue or pull request comment.
+This workflow triggers Junie whenever a user mentions `@junie-agent` in an issue or pull request comment. Only comments from users whose `author_association` is `OWNER`, `MEMBER`, or `COLLABORATOR` trigger it. For PR comments, the PR branch is checked out.
 
 To use it, create a file like `.github/workflows/junie.yml` in your repository:
 
