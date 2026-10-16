@@ -153,4 +153,9 @@ jobs:
       api_key: ${{ secrets.JUNIE_API_KEY }}
 ```
 
-To prevent endless review/fix loops, the workflow ignores the bot's summary comments (those containing the `<!-- kilo-review -->` marker) and uses a per-PR `concurrency` group so fix runs never overlap.
+To prevent endless review/fix loops and duplicate paid runs, the workflow:
+
+- only reacts to PR conversation comments (`issue_comment`), never to inline review comments (`pull_request_review_comment`), so a review with N inline findings does not cause N runs;
+- ignores the bot's summary comments (those containing the `<!-- kilo-review -->` marker);
+- runs Junie at most once per PR head commit: before running, it looks for a `<!-- junie-autofix:<head sha> -->` marker comment and skips if present, otherwise it posts that marker. Re-reviews of an unchanged commit (e.g. unfixable findings) therefore never retrigger Junie; a new commit allows one more run;
+- uses a per-PR `concurrency` group so fix runs never overlap.
