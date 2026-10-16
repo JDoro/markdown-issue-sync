@@ -42,4 +42,7 @@ jobs:
         uses: JetBrains/junie-github-action@v1
         with:
           junie_api_key: ${{ secrets.api_key }}
-          custom_prompt: "Implement the following feedback provided by the automated reviewer."
+          prompt: |
+            Implement the following feedback provided by the automated reviewer:
+
+            ${{ github.event.comment.body }}
