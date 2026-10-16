@@ -129,7 +129,7 @@ jobs:
 
 ### 2. Auto-Fix Workflow
 
-This workflow triggers Junie to automatically fix issues based on feedback left by automated bot reviewers (like `kilocode-bot`).
+This workflow triggers Junie to automatically fix issues based on feedback left by automated bot reviewers (like `kilo-code-bot[bot]`).
 
 To use it, create a file like `.github/workflows/junie-autofix.yml` in your repository:
 
@@ -148,7 +148,7 @@ jobs:
       issues: write
     uses: JDoro/markdown-issue-sync/.github/workflows/reusable-junie-autofix.yml@main
     with:
-      bot_username: 'kilocode-bot' # Optional, defaults to 'kilocode-bot'
+      bot_username: 'kilo-code-bot[bot]' # Optional, defaults to 'kilo-code-bot[bot]'
     secrets:
       api_key: ${{ secrets.JUNIE_API_KEY }}
 ```

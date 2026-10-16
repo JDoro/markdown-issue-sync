@@ -6,7 +6,7 @@ on:
       bot_username:
         description: 'Username of the bot that triggered the autofix'
         type: string
-        default: 'kilocode-bot'
+        default: 'kilo-code-bot[bot]'
         required: false
     secrets:
       api_key:
