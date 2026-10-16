@@ -92,3 +92,70 @@ context_footer: |
 ```
 
 When pushed, this creates an issue, adds the labels/assignees/details, includes the context footer, links the indented tasks as native sub-issues, and appends `#<issue_number>` to the Markdown tasks. Code fences (` ``` ` or `~~~`) will be safely ignored.
+
+## Junie Reusable Workflows
+
+This repository also includes reusable workflows for integrating [JetBrains Junie](https://plugins.jetbrains.com/plugin/22533-junie--ai-agent) into your repositories. These workflows allow Junie to operate on issue/PR comments and automate fixes for automated code review comments.
+
+### Required repository settings and permissions
+
+A called workflow cannot elevate the caller's `GITHUB_TOKEN` permissions, so the caller job must grant `contents: write`, `pull-requests: write` and `issues: write` (as in the examples below). For Junie to create pull requests, also enable, under **Settings > Actions > General > Workflow permissions**, "Read and write permissions" and "Allow GitHub Actions to create and approve pull requests".
+
+> **Limitation:** Pull requests from forks are not supported. The workflows use the base repository's `github.token`, which cannot push to a fork branch, so for fork PRs they skip Junie and post a single comment (deduplicated) explaining this.
+
+### 1. General Junie Workflow
+
+This workflow triggers Junie whenever a user mentions `@junie-agent` in an issue or pull request comment. Only comments from users whose `author_association` is `OWNER`, `MEMBER`, or `COLLABORATOR` trigger it. For PR comments, the PR branch is checked out.
+
+To use it, create a file like `.github/workflows/junie.yml` in your repository:
+
+```yaml
+name: Junie
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-junie:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    uses: JDoro/markdown-issue-sync/.github/workflows/reusable-junie-general.yml@main
+    secrets:
+      api_key: ${{ secrets.JUNIE_API_KEY }}
+```
+
+### 2. Auto-Fix Workflow
+
+This workflow triggers Junie to automatically fix issues based on feedback left by automated bot reviewers (like `kilo-code-bot[bot]`).
+
+To use it, create a file like `.github/workflows/junie-autofix.yml` in your repository:
+
+```yaml
+name: Junie Auto-Fix
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  run-junie-autofix:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    uses: JDoro/markdown-issue-sync/.github/workflows/reusable-junie-autofix.yml@main
+    with:
+      bot_username: 'kilo-code-bot[bot]' # Optional, defaults to 'kilo-code-bot[bot]'
+    secrets:
+      api_key: ${{ secrets.JUNIE_API_KEY }}
+```
+
+To prevent endless review/fix loops and duplicate paid runs, the workflow:
+
+- only reacts to PR conversation comments (`issue_comment`), never to inline review comments (`pull_request_review_comment`), so a review with N inline findings does not cause N runs;
+- ignores the bot's summary comments (those containing the `<!-- kilo-review -->` marker);
+- runs Junie at most once per PR head commit: before running, it looks for a `<!-- junie-autofix:<head sha> -->` marker comment and skips if present, otherwise it posts that marker. Re-reviews of an unchanged commit (e.g. unfixable findings) therefore never retrigger Junie; a new commit allows one more run;
+- uses a per-PR `concurrency` group so fix runs never overlap.

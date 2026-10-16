@@ -1,0 +1,84 @@
+name: Junie Auto-Fix Workflow
+
+on:
+  workflow_call:
+    inputs:
+      bot_username:
+        description: 'Username of the bot that triggered the autofix'
+        type: string
+        default: 'kilo-code-bot[bot]'
+        required: false
+    secrets:
+      api_key:
+        description: 'Junie API key'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  junie:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: junie-autofix-${{ github.repository }}-${{ github.event.issue.number || github.run_id }}
+      cancel-in-progress: false
+    if: ${{ github.event_name == 'issue_comment' && github.event.issue.pull_request && github.event.comment.user.login == inputs.bot_username && !contains(github.event.comment.body, '<!-- kilo-review -->') }}
+    steps:
+      - name: Resolve PR branch
+        id: pr
+        if: ${{ github.event.issue.pull_request }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}" \
+            --jq '"ref=\(.head.ref)", "repo=\(.head.repo.full_name)", "fork=\(.head.repo.full_name != "${{ github.repository }}")", "sha=\(.head.sha)"' >> "$GITHUB_OUTPUT"
+
+      - name: Skip if Junie already ran for this head commit
+        id: dedup
+        if: ${{ steps.pr.outputs.fork != 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          marker="<!-- junie-autofix:${{ steps.pr.outputs.sha }} -->"
+          if gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            --jq '.[].body' | grep -qF "$marker"; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" --body "$marker"
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment that fork PRs are unsupported
+        if: ${{ steps.pr.outputs.fork == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          marker='<!-- junie-fork-unsupported -->'
+          existing=$(gh api --paginate "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+            --jq "map(select(.body | contains(\"$marker\"))) | length" | paste -sd+ - | bc)
+          if [ "${existing:-0}" -gt 0 ]; then
+            echo "Fork-unsupported comment already posted; skipping."
+            exit 0
+          fi
+          gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" \
+            --body "$marker
+          Junie does not support pull requests from forks, because it cannot push changes back to the fork branch."
+
+      - name: Checkout repository
+        if: ${{ steps.pr.outputs.fork != 'true' && steps.dedup.outputs.run == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.pr.outputs.repo || github.repository }}
+          ref: ${{ steps.pr.outputs.ref || '' }}
+
+      - name: Run Junie Auto-Fix
+        uses: JetBrains/junie-github-action@e80674f1534684678e52266b40fe9751352bc1ff # v1
+        if: ${{ steps.pr.outputs.fork != 'true' && steps.dedup.outputs.run == 'true' }}
+        with:
+          junie_api_key: ${{ secrets.api_key }}
+          prompt: |
+            Implement the following feedback provided by the automated reviewer:
+
+            ${{ github.event.comment.body }}

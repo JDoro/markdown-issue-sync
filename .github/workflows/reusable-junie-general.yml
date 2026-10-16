@@ -1,0 +1,48 @@
+name: Junie General Workflow
+
+on:
+  workflow_call:
+    secrets:
+      api_key:
+        description: 'Junie API key'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  junie:
+    runs-on: ubuntu-latest
+    if: ${{ contains(github.event.comment.body, '@junie-agent') && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) }}
+    steps:
+      - name: Resolve PR branch
+        id: pr
+        if: ${{ github.event.issue.pull_request }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/pulls/${{ github.event.issue.number }}" \
+            --jq '"ref=\(.head.ref)", "repo=\(.head.repo.full_name)", "fork=\(.head.repo.full_name != "${{ github.repository }}")"' >> "$GITHUB_OUTPUT"
+
+      - name: Comment that fork PRs are unsupported
+        if: ${{ steps.pr.outputs.fork == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "${{ github.event.issue.number }}" --repo "${{ github.repository }}" \
+            --body "Junie does not support pull requests from forks, because it cannot push changes back to the fork branch."
+
+      - name: Checkout repository
+        if: ${{ steps.pr.outputs.fork != 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.pr.outputs.repo || github.repository }}
+          ref: ${{ steps.pr.outputs.ref || '' }}
+
+      - name: Run Junie
+        if: ${{ steps.pr.outputs.fork != 'true' }}
+        uses: JetBrains/junie-github-action@e80674f1534684678e52266b40fe9751352bc1ff # v1
+        with:
+          junie_api_key: ${{ secrets.api_key }}
