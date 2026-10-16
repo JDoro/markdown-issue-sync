@@ -15,7 +15,7 @@ permissions:
 jobs:
   junie:
     runs-on: ubuntu-latest
-    if: contains(github.event.comment.body, '@junie-agent')
+    if: ${{ contains(github.event.comment.body, '@junie-agent') }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

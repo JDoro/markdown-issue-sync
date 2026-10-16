@@ -21,7 +21,7 @@ permissions:
 jobs:
   junie:
     runs-on: ubuntu-latest
-    if: github.event.comment.user.login == inputs.bot_username
+    if: ${{ github.event.comment.user.login == inputs.bot_username }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
