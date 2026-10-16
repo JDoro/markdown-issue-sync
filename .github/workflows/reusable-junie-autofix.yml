@@ -52,7 +52,7 @@ jobs:
 
       - name: Run Junie Auto-Fix
         if: ${{ steps.pr.outputs.fork != 'true' }}
-        uses: JetBrains/junie-github-action@v1
+        uses: JetBrains/junie-github-action@e80674f1534684678e52266b40fe9751352bc1ff # v1
         with:
           junie_api_key: ${{ secrets.api_key }}
           prompt: |
