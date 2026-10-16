@@ -97,6 +97,10 @@ When pushed, this creates an issue, adds the labels/assignees/details, includes 
 
 This repository also includes reusable workflows for integrating [JetBrains Junie](https://plugins.jetbrains.com/plugin/22533-junie--ai-agent) into your repositories. These workflows allow Junie to operate on issue/PR comments and automate fixes for automated code review comments.
 
+### Required repository settings and permissions
+
+A called workflow cannot elevate the caller's `GITHUB_TOKEN` permissions, so the caller job must grant `contents: write`, `pull-requests: write` and `issues: write` (as in the examples below). For Junie to create pull requests, also enable, under **Settings > Actions > General > Workflow permissions**, "Read and write permissions" and "Allow GitHub Actions to create and approve pull requests".
+
 ### 1. General Junie Workflow
 
 This workflow triggers Junie whenever a user mentions `@junie-agent` in an issue or pull request comment. Only comments from users whose `author_association` is `OWNER`, `MEMBER`, or `COLLABORATOR` trigger it. For PR comments, the PR branch is checked out.
@@ -112,6 +116,10 @@ on:
 
 jobs:
   run-junie:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     uses: JDoro/markdown-issue-sync/.github/workflows/reusable-junie-general.yml@main
     secrets:
       api_key: ${{ secrets.JUNIE_API_KEY }}
@@ -132,6 +140,10 @@ on:
 
 jobs:
   run-junie-autofix:
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
     uses: JDoro/markdown-issue-sync/.github/workflows/reusable-junie-autofix.yml@main
     with:
       bot_username: 'kilocode-bot' # Optional, defaults to 'kilocode-bot'
