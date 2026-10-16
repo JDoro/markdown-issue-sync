@@ -72,12 +72,14 @@ jobs:
   call-implement:
     permissions:
       issues: write
-    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.label.name == 'tdd-implement'"
+    if: "github.event.sender.login != 'google-labs-jules[bot]' && github.event.label.name == 'tdd-implement' && github.event.pull_request.head.repo.full_name == github.repository"
     uses: YOUR_ORG/markdown-issue-sync/.github/workflows/jules-tdd-implement-template.yml@main
     with:
       pr_number: ${{ github.event.pull_request.number }}
       branch_name: ${{ github.head_ref }}
 ```
+
+> **Note:** This example only runs for same-repo PRs. For fork PRs, `github.head_ref` is the fork's branch name, which doesn't exist in the base repository, so Jules cannot commit to it. Fork PRs are therefore not supported by this workflow.
 
 ### 4. CI Failure Auto-Fix (Workflow Run / Check Run Trigger)
 Triggers `jules-ci-failure-template.yml` when a CI run fails.
