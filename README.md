@@ -159,3 +159,118 @@ To prevent endless review/fix loops and duplicate paid runs, the workflow:
 - ignores the bot's summary comments (those containing the `<!-- kilo-review -->` marker);
 - runs Junie at most once per PR head commit: before running, it looks for a `<!-- junie-autofix:<head sha> -->` marker comment and skips if present, otherwise it posts that marker. Re-reviews of an unchanged commit (e.g. unfixable findings) therefore never retrigger Junie; a new commit allows one more run;
 - uses a per-PR `concurrency` group so fix runs never overlap.
+
+## Jules Reusable Workflows
+
+This repository also includes reusable workflows for integrating [Jules AI](https://github.com/google-labs-jules) into your projects. Jules operates by having issues created and assigned to it. These workflows provide convenient templates to programmatically assign tasks to Jules.
+
+### Required Setup to Prevent Infinite Loops
+
+> **WARNING:** When configuring Jules automated workflows, explicitly verify that the sender is not the bot itself before calling these templates, to prevent bot actions from triggering recursive downstream workflows and infinite loops.
+> `if: ${{ github.event.sender.login != 'google-labs-jules[bot]' }}`
+
+### 1. CI Failure Template
+
+Creates an issue for Jules to fix a failing CI build on a specific branch.
+
+To use it, call it from your repository's CI workflow when a job fails:
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # ... your build/test steps ...
+
+  notify-jules:
+    needs: build
+    if: ${{ failure() && github.event.pull_request && github.event.sender.login != 'google-labs-jules[bot]' }}
+    uses: JDoro/markdown-issue-sync/.github/workflows/jules-ci-failure-template.yml@main
+    permissions:
+      issues: write
+    with:
+      pr_number: "${{ github.event.pull_request.number }}"
+      branch_name: "${{ github.head_ref }}"
+      error_log: "Check the GitHub Actions logs for details." # In practice, extract logs using steps
+```
+
+### 2. Maintenance Template
+
+Creates an issue for Jules to perform weekly or routine maintenance, such as auditing dependencies or adding missing tests.
+
+```yaml
+name: Weekly Maintenance
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Every Sunday at midnight
+
+jobs:
+  run-maintenance:
+    if: ${{ github.event.sender.login != 'google-labs-jules[bot]' }}
+    uses: JDoro/markdown-issue-sync/.github/workflows/jules-maintenance-template.yml@main
+    permissions:
+      issues: write
+    with:
+      focus_area: 'recent commits, check for missing unit tests, and audit npm dependencies'
+```
+
+### 3. TDD Generate Tests Template
+
+Creates an issue asking Jules to write failing unit tests based on a feature description, acting as the first step in a TDD workflow.
+
+```yaml
+name: Jules TDD Start
+
+on:
+  workflow_dispatch:
+    inputs:
+      feature_title:
+        description: 'Title of the feature'
+        required: true
+      feature_desc:
+        description: 'Description of the feature'
+        required: true
+
+jobs:
+  generate-tests:
+    if: ${{ github.event.sender.login != 'google-labs-jules[bot]' }}
+    uses: JDoro/markdown-issue-sync/.github/workflows/jules-tdd-generate-tests-template.yml@main
+    permissions:
+      issues: write
+    with:
+      feature_title: "${{ github.event.inputs.feature_title }}"
+      feature_desc: "${{ github.event.inputs.feature_desc }}"
+```
+
+### 4. TDD Implement Template
+
+Creates an issue asking Jules to implement the logic for a PR that contains failing tests, completing the TDD cycle.
+
+```yaml
+name: Jules TDD Implement
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  implement:
+    # Trigger when Jules opens a PR with tests, or you push tests manually
+    if: ${{ github.event.sender.login != 'google-labs-jules[bot]' && contains(github.head_ref, 'tdd-') }}
+    uses: JDoro/markdown-issue-sync/.github/workflows/jules-tdd-implement-template.yml@main
+    permissions:
+      issues: write
+    with:
+      pr_number: "${{ github.event.pull_request.number }}"
+      branch_name: "${{ github.head_ref }}"
+```
