@@ -1,0 +1,41 @@
+name: Jules CI Failure Template
+
+# Caller workflow MUST check github.event.sender.login != 'google-labs-jules[bot]' before calling this, to prevent infinite loops.
+on:
+  workflow_call:
+    inputs:
+      pr_number:
+        description: 'PR number'
+        required: true
+        type: string
+      branch_name:
+        description: 'Branch name'
+        required: true
+        type: string
+      error_log:
+        description: 'Error log'
+        required: true
+        type: string
+
+jobs:
+  create-issue:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create issue for Jules
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ inputs.pr_number }}
+          BRANCH_NAME: ${{ inputs.branch_name }}
+          ERROR_LOG: ${{ inputs.error_log }}
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Fix CI Failure on PR #${process.env.PR_NUMBER}`,
+              body: `Please fix the implementation on branch \`${process.env.BRANCH_NAME}\` based on the following CI failure:\n\n\`\`\`\n${process.env.ERROR_LOG}\n\`\`\`\n\n@jules`,
+              assignees: ['jules'],
+              labels: ['jules', 'jules-task']
+            })
