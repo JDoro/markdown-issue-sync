@@ -101,7 +101,7 @@ This repository also includes reusable workflows for integrating [JetBrains Juni
 
 A called workflow cannot elevate the caller's `GITHUB_TOKEN` permissions, so the caller job must grant `contents: write`, `pull-requests: write` and `issues: write` (as in the examples below). For Junie to create pull requests, also enable, under **Settings > Actions > General > Workflow permissions**, "Read and write permissions" and "Allow GitHub Actions to create and approve pull requests".
 
-> **Limitation:** Pull requests from forks are not supported. The workflows use the base repository's `github.token`, which cannot push to a fork branch, so for fork PRs they skip Junie and post a comment explaining this.
+> **Limitation:** Pull requests from forks are not supported. The workflows use the base repository's `github.token`, which cannot push to a fork branch, so for fork PRs they skip Junie and post a single comment (deduplicated) explaining this.
 
 ### 1. General Junie Workflow
 
