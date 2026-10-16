@@ -21,7 +21,10 @@ permissions:
 jobs:
   junie:
     runs-on: ubuntu-latest
-    if: ${{ github.event.comment.user.login == inputs.bot_username }}
+    concurrency:
+      group: junie-autofix-${{ github.repository }}-${{ github.event.issue.number || github.run_id }}
+      cancel-in-progress: false
+    if: ${{ github.event.comment.user.login == inputs.bot_username && !contains(github.event.comment.body, '<!-- kilo-review -->') }}
     steps:
       - name: Resolve PR branch
         id: pr

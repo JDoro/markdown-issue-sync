@@ -152,3 +152,5 @@ jobs:
     secrets:
       api_key: ${{ secrets.JUNIE_API_KEY }}
 ```
+
+To prevent endless review/fix loops, the workflow ignores the bot's summary comments (those containing the `<!-- kilo-review -->` marker) and uses a per-PR `concurrency` group so fix runs never overlap.
