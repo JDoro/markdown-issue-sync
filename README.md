@@ -254,19 +254,22 @@ jobs:
 
 ### 4. TDD Implement Template
 
-Creates an issue asking Jules to implement the logic for a PR that contains failing tests, completing the TDD cycle.
+Creates an issue asking Jules to implement the logic for a PR that contains failing tests, completing the TDD cycle. It is triggered by a human adding the `tdd-implement` label to the PR (not by Jules opening or pushing to it).
+
+> **Note:** The template does not guard against loops itself. Keep the `github.event.sender.login != 'google-labs-jules[bot]'` check in the caller, and avoid triggers like `synchronize` that Jules's own pushes would fire.
 
 ```yaml
 name: Jules TDD Implement
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [labeled]
 
 jobs:
   implement:
-    # Trigger when Jules opens a PR with tests, or you push tests manually
-    if: ${{ github.event.sender.login != 'google-labs-jules[bot]' && contains(github.head_ref, 'tdd-') }}
+    # A human adds the `tdd-implement` label to the PR containing the failing tests.
+    # The sender is the person who labeled, never the Jules bot, so this cannot loop.
+    if: ${{ github.event.label.name == 'tdd-implement' && github.event.sender.login != 'google-labs-jules[bot]' }}
     uses: JDoro/markdown-issue-sync/.github/workflows/jules-tdd-implement-template.yml@main
     permissions:
       issues: write
