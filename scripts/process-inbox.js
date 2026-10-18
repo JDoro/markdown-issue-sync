@@ -5,7 +5,8 @@ const path = require('node:path');
 const INBOX_DIR = path.join(process.cwd(), 'issues', 'inbox');
 const PROCESSED_DIR = path.join(process.cwd(), 'issues', 'processed');
 
-async function findExistingIssue(repoFullName, token, marker) {
+async function fetchIssueSnapshot(repoFullName, token) {
+  const snapshot = [];
   for (let page = 1; ; page++) {
     const response = await fetch(`https://api.github.com/repos/${repoFullName}/issues?state=all&per_page=100&page=${page}`, {
       headers: {
@@ -17,12 +18,13 @@ async function findExistingIssue(repoFullName, token, marker) {
       throw new Error(`GitHub API responded with status ${response.status}: ${await response.text()}`);
     }
     const issues = await response.json();
-    const found = issues.find(i => !i.pull_request && typeof i.body === 'string' && i.body.includes(marker));
-    if (found) {
-      return found;
+    for (const i of issues) {
+      if (!i.pull_request && typeof i.body === 'string') {
+        snapshot.push({ number: i.number, body: i.body });
+      }
     }
     if (issues.length < 100) {
-      return null;
+      return snapshot;
     }
   }
 }
@@ -44,6 +46,14 @@ async function processInbox() {
     console.error(`Failed to read directory ${INBOX_DIR}:`, err);
     process.exit(1);
   }
+
+  let snapshot = null;
+  const findExistingIssue = async (marker) => {
+    if (!snapshot) {
+      snapshot = await fetchIssueSnapshot(repoFullName, token);
+    }
+    return snapshot.find(i => i.body.includes(marker)) || null;
+  };
 
   for (const file of files) {
     if (!file.endsWith('.md')) {
@@ -73,11 +83,12 @@ async function processInbox() {
     try {
       const marker = `<!-- markdown-issue-sync:inbox-id=${crypto.createHash('sha256').update(file).digest('hex').slice(0, 16)} -->`;
       let issueNumber;
-      const existing = await findExistingIssue(repoFullName, token, marker);
+      const existing = await findExistingIssue(marker);
       if (existing) {
         issueNumber = existing.number;
         console.log(`Found existing issue #${issueNumber} for ${file}, reusing.`);
       } else {
+        const issueBody = `${content}\n\n${marker}`;
         const response = await fetch(`https://api.github.com/repos/${repoFullName}/issues`, {
           method: 'POST',
           headers: {
@@ -87,7 +98,7 @@ async function processInbox() {
           },
           body: JSON.stringify({
             title: issueTitle,
-            body: `${content}\n\n${marker}`
+            body: issueBody
           })
         });
 
@@ -97,6 +108,7 @@ async function processInbox() {
 
         const responseData = await response.json();
         issueNumber = responseData.number;
+        snapshot.push({ number: issueNumber, body: issueBody });
         console.log(`Successfully created issue #${issueNumber}`);
       }
 
