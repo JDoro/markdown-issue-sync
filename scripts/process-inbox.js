@@ -69,10 +69,9 @@ async function processInbox() {
       console.log(`Successfully created issue #${issueNumber}`);
 
       const newContent = `---\nissue_number: ${issueNumber}\n---\n${content}`;
-      fs.writeFileSync(filePath, newContent, 'utf-8');
-
       const processedFilePath = path.join(PROCESSED_DIR, file);
-      fs.renameSync(filePath, processedFilePath);
+      fs.writeFileSync(processedFilePath, newContent, 'utf-8');
+      fs.unlinkSync(filePath);
       console.log(`Moved ${file} to processed folder.`);
 
     } catch (error) {
@@ -81,4 +80,7 @@ async function processInbox() {
   }
 }
 
-processInbox();
+processInbox().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
